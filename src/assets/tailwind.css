@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  /* Base dark palette */
+  --color-eval-bg: #0a0a0f;
+  --color-eval-surface: #12121a;
+  --color-eval-card: #1a1a2e;
+  --color-eval-glass: rgba(255, 255, 255, 0.05);
+  --color-eval-border: rgba(255, 255, 255, 0.1);
+  --color-eval-border-hover: rgba(255, 255, 255, 0.2);
+
+  /* Score colors (traffic light) */
+  --color-score-elite: #00ff88;
+  --color-score-strong: #00d4ff;
+  --color-score-adequate: #f7931a;
+  --color-score-weak: #ff6b4a;
+  --color-score-failing: #ff4757;
+
+  /* Accent */
+  --color-accent: #7c3aed;
+  --color-accent-hover: #6d28d9;
+  --color-accent-soft: rgba(124, 58, 237, 0.15);
+
+  /* Text */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: rgba(255, 255, 255, 0.7);
+  --color-text-muted: rgba(255, 255, 255, 0.4);
+
+  /* Department colors */
+  --color-dept-dev: #7c3aed;
+  --color-dept-marketing: #f59e0b;
+  --color-dept-ops: #06b6d4;
+}
+
+/* Glass morphism utilities */
+.glass {
+  background: var(--color-eval-glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-eval-border);
+}
+
+.glass-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--color-eval-border);
+  border-radius: 12px;
+  transition: border-color 0.2s ease;
+}
+
+.glass-card:hover {
+  border-color: var(--color-eval-border-hover);
+}
+
+/* Score bar fill animation */
+.score-bar {
+  transition: width 0.6s ease-out;
+}

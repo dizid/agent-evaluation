@@ -1,0 +1,26 @@
+{
+  "name": "agent-evaluation",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AgentEval — Standardized AI agent evaluation + marketplace",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "chart.js": "^4.5.1",
+    "vue": "^3.5.27",
+    "vue-router": "^5.0.2"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^5.1.2",
+    "@netlify/vite-plugin": "^2.8.0",
+    "@vitejs/plugin-vue": "^6.0.4",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}
