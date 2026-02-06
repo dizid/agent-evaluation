@@ -11,38 +11,41 @@ export default async function handler(req: Request) {
     const minScore = url.searchParams.get('min_score')
     const sort = url.searchParams.get('sort') || 'name'
 
-    // Build query with optional filters
-    let query = 'SELECT * FROM agents WHERE 1=1'
-    const params: unknown[] = []
-    let paramIndex = 1
-
-    if (department) {
-      query += ` AND department = $${paramIndex++}`
-      params.push(department)
+    // Query with tagged template literals (neon driver requirement)
+    let agents
+    if (department && minScore) {
+      agents = await sql`
+        SELECT * FROM agents
+        WHERE department = ${department}
+        AND overall_score >= ${parseFloat(minScore)}
+      `
+    } else if (department) {
+      agents = await sql`
+        SELECT * FROM agents WHERE department = ${department}
+      `
+    } else if (minScore) {
+      agents = await sql`
+        SELECT * FROM agents WHERE overall_score >= ${parseFloat(minScore)}
+      `
+    } else {
+      agents = await sql`SELECT * FROM agents`
     }
 
-    if (minScore) {
-      query += ` AND overall_score >= $${paramIndex++}`
-      params.push(parseFloat(minScore))
-    }
+    // Sort in JavaScript (simple and safe with 12 agents)
+    const sorted = [...agents].sort((a: any, b: any) => {
+      switch (sort) {
+        case 'score':
+          return (parseFloat(b.overall_score) || 0) - (parseFloat(a.overall_score) || 0)
+        case 'department':
+          return (a.department || '').localeCompare(b.department || '') ||
+                 (a.name || '').localeCompare(b.name || '')
+        case 'name':
+        default:
+          return (a.name || '').localeCompare(b.name || '')
+      }
+    })
 
-    // Sort options
-    switch (sort) {
-      case 'score':
-        query += ' ORDER BY overall_score DESC NULLS LAST'
-        break
-      case 'department':
-        query += ' ORDER BY department, name'
-        break
-      case 'name':
-      default:
-        query += ' ORDER BY name'
-        break
-    }
-
-    const agents = await sql(query, params)
-
-    return json({ agents, total: agents.length })
+    return json({ agents: sorted, total: sorted.length })
   } catch (err) {
     console.error('agents-list error:', err)
     return error('Failed to fetch agents', 500)
