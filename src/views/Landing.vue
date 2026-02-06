@@ -24,7 +24,7 @@ onMounted(async () => {
 const topAgents = computed(() =>
   [...agents.value]
     .filter(a => a.overall_score != null)
-    .sort((a, b) => b.overall_score - a.overall_score)
+    .sort((a, b) => Number(b.overall_score || 0) - Number(a.overall_score || 0))
     .slice(0, 3)
 )
 
@@ -42,7 +42,7 @@ const totalAgents = computed(() => agents.value.length)
 const avgScore = computed(() => {
   const scored = agents.value.filter(a => a.overall_score != null)
   if (scored.length === 0) return null
-  const sum = scored.reduce((s, a) => s + a.overall_score, 0)
+  const sum = scored.reduce((s, a) => s + Number(a.overall_score || 0), 0)
   return (sum / scored.length).toFixed(1)
 })
 const totalEvals = computed(() =>

@@ -45,7 +45,7 @@ const filteredAgents = computed(() => {
 
   // Sort
   if (sortBy.value === 'score') {
-    result.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0))
+    result.sort((a, b) => Number(b.overall_score || 0) - Number(a.overall_score || 0))
   } else if (sortBy.value === 'name') {
     result.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   }

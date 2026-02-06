@@ -36,7 +36,7 @@ const filtered = computed(() => {
     result = result.filter(a => a.department === deptFilter.value)
   }
   // Already sorted by score from API, but ensure
-  result.sort((a, b) => (b.overall_score || 0) - (a.overall_score || 0))
+  result.sort((a, b) => Number(b.overall_score || 0) - Number(a.overall_score || 0))
   return result
 })
 

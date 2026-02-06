@@ -107,7 +107,7 @@ export default async function handler(req: Request) {
     }
 
     const evalCount = allEvals.length
-    const smoothedScore = bayesianScore(evalCount, rawAvg)
+    const smoothedScore = Number(rawAvg.toFixed(1))
     const agentRatingLabel = getRatingLabel(smoothedScore)
     const confidence = getConfidence(evalCount)
 

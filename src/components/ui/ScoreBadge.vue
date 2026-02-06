@@ -19,7 +19,7 @@ const sizeClasses = computed(() => {
 })
 
 const displayScore = computed(() =>
-  props.score != null ? props.score.toFixed(1) : '--'
+  props.score != null ? Number(props.score).toFixed(1) : '--'
 )
 </script>
 
