@@ -38,4 +38,12 @@ const router = createRouter({
   routes
 })
 
+// Auto-reload on stale chunks after deploy (new build = new hashes)
+router.onError((error, to) => {
+  if (error.message.includes('Failed to fetch dynamically imported module') ||
+      error.message.includes('Importing a module script failed')) {
+    window.location.href = to.fullPath
+  }
+})
+
 export default router

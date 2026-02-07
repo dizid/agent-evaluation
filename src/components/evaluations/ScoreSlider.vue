@@ -54,6 +54,10 @@ const thumbColor = computed(() => {
         step="1"
         :value="modelValue"
         @input="onInput"
+        :aria-label="label"
+        :aria-valuenow="modelValue"
+        aria-valuemin="1"
+        aria-valuemax="10"
         class="w-full h-2 rounded-full appearance-none cursor-pointer bg-eval-surface
                [&::-webkit-slider-thumb]:appearance-none
                [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6

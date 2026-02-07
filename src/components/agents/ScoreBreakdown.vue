@@ -1,18 +1,12 @@
 <script setup>
 import { computed } from 'vue'
 import { UNIVERSAL_CRITERIA, getScoreColor } from '@/services/scoring'
+import { formatLabel } from '@/utils/format'
 
 const props = defineProps({
   scores: { type: Object, default: () => ({}) },
   kpiNames: { type: Array, default: () => [] }
 })
-
-// Format criterion key into readable label
-function formatLabel(key) {
-  return key
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, c => c.toUpperCase())
-}
 
 // Get bar width as percentage (1-10 scale mapped to 10-100%)
 function barWidth(score) {

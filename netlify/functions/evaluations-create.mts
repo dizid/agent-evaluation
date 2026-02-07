@@ -5,7 +5,6 @@ import {
   UNIVERSAL_CRITERIA,
   calculateOverall,
   calculateAverages,
-  bayesianScore,
   getRatingLabel,
   getConfidence,
   isLowEffort,
@@ -18,12 +17,28 @@ export default async function handler(req: Request) {
   if (req.method !== 'POST') return error('Method not allowed', 405)
 
   try {
-    const body = await req.json()
+    let body
+    try {
+      body = await req.json()
+    } catch {
+      return error('Request body must be valid JSON', 400)
+    }
 
     // Validate required fields
     const { agent_id, scores, evaluator_type, task_description, top_strength, top_weakness, action_item, is_self_eval } = body
     if (!agent_id || !scores) {
       return error('agent_id and scores are required', 400)
+    }
+
+    // Validate scores: must be integers 1-10, at least one required
+    const scoreEntries = Object.entries(scores)
+    if (scoreEntries.length === 0) {
+      return error('At least one score is required', 400)
+    }
+    for (const [key, value] of scoreEntries) {
+      if (typeof value !== 'number' || value < 1 || value > 10 || !Number.isInteger(value)) {
+        return error(`Score "${key}" must be an integer between 1 and 10`, 400)
+      }
     }
 
     // Verify agent exists and get KPI definitions
@@ -45,13 +60,14 @@ export default async function handler(req: Request) {
       weight = 0.5
     }
 
-    // 3. Check extreme scores without notes — cap/floor them
+    // 3. Check extreme scores without justification — cap/floor them
+    // Justification = per-criterion notes OR top_strength/top_weakness text
     const adjustedScores = { ...scores }
     const notes: Record<string, string> = body.notes || {}
+    const hasJustification = !!(top_strength || top_weakness)
     for (const [key, value] of Object.entries(adjustedScores)) {
       if (typeof value !== 'number') continue
-      if (needsJustification(value as number) && !notes[key]) {
-        // Cap high scores to 8, floor low scores to 4 when no justification given
+      if (needsJustification(value as number) && !notes[key] && !hasJustification) {
         if ((value as number) >= 9) {
           adjustedScores[key] = 8
         } else if ((value as number) <= 3) {
@@ -91,15 +107,14 @@ export default async function handler(req: Request) {
     `
     const evaluation = evalResult[0]
 
-    // 6. Recalculate agent's overall score using Bayesian smoothing
-    // Get all evaluations for this agent (weighted average)
+    // 6. Recalculate agent's overall score (weighted average)
     const allEvals = await sql`
       SELECT overall, weight FROM evaluations
       WHERE agent_id = ${agent_id} AND overall IS NOT NULL
       ORDER BY created_at DESC
     `
 
-    let rawAvg = overall || 0
+    let rawAvg = overall ?? 0
     if (allEvals.length > 0) {
       const totalWeight = allEvals.reduce((sum: number, e: any) => sum + (parseFloat(e.weight) || 1), 0)
       const weightedSum = allEvals.reduce((sum: number, e: any) => sum + (parseFloat(e.overall) * (parseFloat(e.weight) || 1)), 0)

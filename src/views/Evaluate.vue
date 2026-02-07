@@ -11,6 +11,7 @@ import {
   isLowEffort,
   needsJustification
 } from '@/services/scoring'
+import { formatLabel } from '@/utils/format'
 import ScoreSlider from '@/components/evaluations/ScoreSlider.vue'
 import ScoreBadge from '@/components/ui/ScoreBadge.vue'
 import RatingLabel from '@/components/ui/RatingLabel.vue'
@@ -129,10 +130,6 @@ const universalWithInfo = computed(() =>
   }))
 )
 
-function formatLabel(key) {
-  return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
 // Can submit
 const canSubmit = computed(() =>
   selectedAgentId.value && taskDescription.value.trim().length > 0
@@ -154,7 +151,7 @@ async function handleSubmit() {
       top_weakness: topWeakness.value.trim() || null,
       action_item: actionItem.value.trim() || null
     })
-    router.push(`/agent/${selectedAgentId.value}`)
+    router.push(`/agent/${selectedAgentId.value}?submitted=1`)
   } catch (e) {
     submitError.value = e.message
   } finally {
@@ -176,8 +173,9 @@ async function handleSubmit() {
     <template v-else>
       <!-- Step 1: Select Agent -->
       <section class="space-y-3">
-        <h2 class="text-text-secondary text-sm uppercase tracking-wider">1. Select Agent</h2>
+        <label for="agent-select" class="text-text-secondary text-sm uppercase tracking-wider block">1. Select Agent</label>
         <select
+          id="agent-select"
           v-model="selectedAgentId"
           class="w-full bg-eval-surface text-text-primary border border-eval-border rounded-lg px-4 py-3 text-sm"
         >
@@ -190,8 +188,9 @@ async function handleSubmit() {
 
       <!-- Step 2: Task Context -->
       <section class="space-y-3">
-        <h2 class="text-text-secondary text-sm uppercase tracking-wider">2. Task Context</h2>
+        <label for="task-description" class="text-text-secondary text-sm uppercase tracking-wider block">2. Task Context</label>
         <textarea
+          id="task-description"
           v-model="taskDescription"
           placeholder="What task did this agent perform?"
           rows="3"
@@ -241,18 +240,21 @@ async function handleSubmit() {
           v-model="topStrength"
           type="text"
           placeholder="Top strength"
+          aria-label="Top strength"
           class="w-full bg-eval-surface text-text-primary border border-eval-border rounded-lg px-4 py-3 text-sm placeholder:text-text-muted"
         />
         <input
           v-model="topWeakness"
           type="text"
           placeholder="Top weakness"
+          aria-label="Top weakness"
           class="w-full bg-eval-surface text-text-primary border border-eval-border rounded-lg px-4 py-3 text-sm placeholder:text-text-muted"
         />
         <input
           v-model="actionItem"
           type="text"
           placeholder="Action item for improvement"
+          aria-label="Action item for improvement"
           class="w-full bg-eval-surface text-text-primary border border-eval-border rounded-lg px-4 py-3 text-sm placeholder:text-text-muted"
         />
       </section>

@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { getAgent, getAgentEvaluations } from '@/services/api'
 import { getRatingLabel, getConfidence } from '@/services/scoring'
 import ScoreBadge from '@/components/ui/ScoreBadge.vue'
@@ -11,12 +11,22 @@ import ScoreBreakdown from '@/components/agents/ScoreBreakdown.vue'
 import EvaluationCard from '@/components/evaluations/EvaluationCard.vue'
 
 const route = useRoute()
+const router = useRouter()
 const agent = ref(null)
 const latestEvaluation = ref(null)
 const evaluations = ref([])
 const loading = ref(true)
 const error = ref(null)
 const showPersona = ref(false)
+const showSubmitSuccess = ref(route.query.submitted === '1')
+
+// Clear the query param so it doesn't persist on refresh
+if (showSubmitSuccess.value) {
+  router.replace({ path: route.path, query: {} })
+  // Auto-hide after 5 seconds
+  const timer = setTimeout(() => { showSubmitSuccess.value = false }, 5000)
+  onUnmounted(() => clearTimeout(timer))
+}
 
 onMounted(async () => {
   try {
@@ -84,6 +94,11 @@ const latestScores = computed(() => {
     <div v-else-if="error" class="text-score-failing text-center py-12">{{ error }}</div>
 
     <template v-else-if="agent">
+      <!-- Success banner -->
+      <div v-if="showSubmitSuccess" class="glass-card p-4 mb-6 border-score-elite/30">
+        <p class="text-score-elite text-sm font-medium">Evaluation submitted successfully.</p>
+      </div>
+
       <!-- Header -->
       <div class="space-y-4 mb-8">
         <div class="flex items-start justify-between gap-4">
@@ -120,6 +135,7 @@ const latestScores = computed(() => {
       <div v-if="agent.persona" class="mb-6">
         <button
           @click="showPersona = !showPersona"
+          :aria-expanded="showPersona"
           class="text-text-muted text-sm hover:text-text-secondary transition-colors"
         >
           {{ showPersona ? 'Hide persona' : 'Show persona' }}

@@ -4,6 +4,7 @@ import ScoreBadge from '@/components/ui/ScoreBadge.vue'
 import RatingLabel from '@/components/ui/RatingLabel.vue'
 import ScoreBreakdown from '@/components/agents/ScoreBreakdown.vue'
 import { getRatingLabel, UNIVERSAL_CRITERIA, getScoreColor } from '@/services/scoring'
+import { formatLabel } from '@/utils/format'
 
 const props = defineProps({
   evaluation: { type: Object, required: true }
@@ -55,10 +56,6 @@ const topWeakness = computed(() => {
   return worst ? formatLabel(worst) : null
 })
 
-function formatLabel(key) {
-  return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
-
 // Determine KPI names from scores (keys not in UNIVERSAL_CRITERIA)
 const kpiNames = computed(() => {
   if (!props.evaluation.scores) return []
@@ -103,6 +100,7 @@ const kpiNames = computed(() => {
     <button
       v-if="evaluation.scores"
       @click="expanded = !expanded"
+      :aria-expanded="expanded"
       class="text-xs text-text-muted hover:text-text-secondary transition-colors py-1"
     >
       {{ expanded ? 'Hide details' : 'Show score breakdown' }}
