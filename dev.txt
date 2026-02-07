@@ -1,4 +1,5 @@
-new project
+Grep "@DataOps|## @Data" (in /home/marc/DEV/CLAUDE.md)
+wrong CLAUDE.md ?
 
 https://github.com/dizid/agent-evaluation.git
 
