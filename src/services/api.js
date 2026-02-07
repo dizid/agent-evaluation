@@ -50,12 +50,12 @@ export const createAgent = (data) => request('/agents', {
   body: JSON.stringify(data)
 })
 
-export const updateAgent = (id, data) => request(`/agents/${id}/update`, {
+export const updateAgent = (id, data) => request(`/agents/${id}`, {
   method: 'PUT',
   body: JSON.stringify(data)
 })
 
-export const updateAgentStatus = (id, status) => request(`/agents/${id}/status`, {
+export const updateAgentStatus = (id, status) => request(`/agents/${id}`, {
   method: 'PATCH',
   body: JSON.stringify({ status })
 })

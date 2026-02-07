@@ -25,7 +25,7 @@ export default async function handler(req: Request) {
     }
 
     // Validate required fields
-    const { agent_id, scores, evaluator_type, task_description, top_strength, top_weakness, action_item, is_self_eval } = body
+    const { agent_id, scores, evaluator_type, task_description, top_strength, top_weakness, action_item, is_self_eval, project } = body
     if (!agent_id || !scores) {
       return error('agent_id and scores are required', 400)
     }
@@ -54,8 +54,10 @@ export default async function handler(req: Request) {
     // 1. Tag self-eval (frontend sends evaluator_type='self' or is_self_eval=true)
     const selfEval = is_self_eval === true || evaluator_type === 'self'
 
-    // 2. Check variance — all scores within 1 point = low effort, weight 0.5
-    let weight = selfEval ? 0.8 : 1.0
+    // 2. Determine weight based on evaluator type
+    // Weight hierarchy: low-effort 0.5 < auto 0.7 < self 0.8 < manual/community 1.0
+    const autoEval = evaluator_type === 'auto'
+    let weight = autoEval ? 0.7 : selfEval ? 0.8 : 1.0
     if (isLowEffort(scores)) {
       weight = 0.5
     }
@@ -87,7 +89,7 @@ export default async function handler(req: Request) {
         agent_id, evaluator_type, task_description, scores,
         universal_avg, role_avg, overall, rating_label,
         top_strength, top_weakness, action_item,
-        is_self_eval, weight
+        is_self_eval, weight, project
       ) VALUES (
         ${agent_id},
         ${evaluator_type || 'manual'},
@@ -101,7 +103,8 @@ export default async function handler(req: Request) {
         ${top_weakness || null},
         ${action_item || null},
         ${selfEval},
-        ${weight}
+        ${weight},
+        ${project || null}
       )
       RETURNING *
     `
