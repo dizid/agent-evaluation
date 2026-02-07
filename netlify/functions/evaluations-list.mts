@@ -17,19 +17,30 @@ export default async function handler(req: Request) {
       return error('Agent ID is required', 400)
     }
 
+    // Parse pagination params
+    const limitParam = parseInt(url.searchParams.get('limit') || '20', 10)
+    const offsetParam = parseInt(url.searchParams.get('offset') || '0', 10)
+    const limit = Math.min(Math.max(1, isNaN(limitParam) ? 20 : limitParam), 100)
+    const offset = Math.max(0, isNaN(offsetParam) ? 0 : offsetParam)
+
     // Verify agent exists
     const agents = await sql`SELECT id FROM agents WHERE id = ${id}`
     if (agents.length === 0) {
       return error('Agent not found', 404)
     }
 
+    // Get total count and paginated evaluations
+    const countResult = await sql`SELECT COUNT(*)::int as total FROM evaluations WHERE agent_id = ${id}`
+    const total = countResult[0].total
+
     const evaluations = await sql`
       SELECT * FROM evaluations
       WHERE agent_id = ${id}
       ORDER BY created_at DESC
+      LIMIT ${limit} OFFSET ${offset}
     `
 
-    return json({ evaluations })
+    return json({ evaluations, total, limit, offset })
   } catch (err) {
     console.error('evaluations-list error:', err)
     return error('Failed to fetch evaluations', 500)

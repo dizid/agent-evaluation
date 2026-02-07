@@ -9,7 +9,8 @@ import {
   getConfidence,
   isLowEffort,
   needsJustification,
-  calculateTrend
+  calculateTrend,
+  bayesianScore
 } from './utils/scoring.ts'
 
 export default async function handler(req: Request) {
@@ -30,10 +31,19 @@ export default async function handler(req: Request) {
       return error('agent_id and scores are required', 400)
     }
 
-    // Validate scores: must be integers 1-10, at least one required
+    // Validate evaluator_type
+    const validEvaluatorTypes = ['self', 'auto', 'manual', 'community']
+    if (evaluator_type && !validEvaluatorTypes.includes(evaluator_type)) {
+      return error(`evaluator_type must be one of: ${validEvaluatorTypes.join(', ')}`, 400)
+    }
+
+    // Validate scores: must be integers 1-10, at least one required, max 20 entries
     const scoreEntries = Object.entries(scores)
     if (scoreEntries.length === 0) {
       return error('At least one score is required', 400)
+    }
+    if (scoreEntries.length > 20) {
+      return error('Too many score entries (max 20)', 400)
     }
     for (const [key, value] of scoreEntries) {
       if (typeof value !== 'number' || value < 1 || value > 10 || !Number.isInteger(value)) {
@@ -54,22 +64,21 @@ export default async function handler(req: Request) {
     // 1. Tag self-eval (frontend sends evaluator_type='self' or is_self_eval=true)
     const selfEval = is_self_eval === true || evaluator_type === 'self'
 
-    // 2. Determine weight based on evaluator type
-    // Weight hierarchy: low-effort 0.5 < auto 0.7 < self 0.8 < manual/community 1.0
+    // 2. Determine weight — lowest applicable wins
+    // Hierarchy: low-effort 0.5 < auto 0.7 < self 0.8 < manual/community 1.0
     const autoEval = evaluator_type === 'auto'
-    let weight = autoEval ? 0.7 : selfEval ? 0.8 : 1.0
-    if (isLowEffort(scores)) {
-      weight = 0.5
-    }
+    let weight = 1.0
+    if (isLowEffort(scores)) weight = 0.5
+    else if (autoEval) weight = 0.7
+    else if (selfEval) weight = 0.8
 
-    // 3. Check extreme scores without justification — cap/floor them
-    // Justification = per-criterion notes OR top_strength/top_weakness text
+    // 3. Check extreme scores without per-criterion justification — cap/floor them
+    // Each extreme score (9+ or 3-) needs its own notes[key] entry to stay uncapped
     const adjustedScores = { ...scores }
     const notes: Record<string, string> = body.notes || {}
-    const hasJustification = !!(top_strength || top_weakness)
     for (const [key, value] of Object.entries(adjustedScores)) {
       if (typeof value !== 'number') continue
-      if (needsJustification(value as number) && !notes[key] && !hasJustification) {
+      if (needsJustification(value as number) && !notes[key]) {
         if ((value as number) >= 9) {
           adjustedScores[key] = 8
         } else if ((value as number) <= 3) {
@@ -125,7 +134,8 @@ export default async function handler(req: Request) {
     }
 
     const evalCount = allEvals.length
-    const smoothedScore = Number(rawAvg.toFixed(1))
+    // Apply Bayesian smoothing: pulls toward 6.0 midpoint until enough evaluations (m=5)
+    const smoothedScore = bayesianScore(evalCount, rawAvg, 5, 6.0)
     const agentRatingLabel = getRatingLabel(smoothedScore)
     const confidence = getConfidence(evalCount)
 

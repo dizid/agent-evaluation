@@ -67,6 +67,17 @@ async function handleUpdate(id: string, req: Request) {
   const body = await req.json()
   const agent = existing[0]
 
+  // Validate department if provided
+  const validDepartments = ['development', 'marketing', 'operations', 'tools', 'trading']
+  if (body.department && !validDepartments.includes(body.department)) {
+    return error(`department must be one of: ${validDepartments.join(', ')}`, 400)
+  }
+
+  // Validate kpi_definitions if provided
+  if (body.kpi_definitions && (!Array.isArray(body.kpi_definitions) || !body.kpi_definitions.every((k: any) => typeof k === 'string'))) {
+    return error('kpi_definitions must be an array of strings', 400)
+  }
+
   const name = body.name ?? agent.name
   const department = body.department ?? agent.department
   const role = body.role ?? agent.role

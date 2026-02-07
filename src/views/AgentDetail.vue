@@ -96,7 +96,12 @@ const latestScores = computed(() => {
     <template v-else-if="agent">
       <!-- Success banner -->
       <div v-if="showSubmitSuccess" class="glass-card p-4 mb-6 border-score-elite/30">
-        <p class="text-score-elite text-sm font-medium">Evaluation submitted successfully.</p>
+        <p class="text-score-elite text-sm font-medium">
+          Evaluation submitted successfully.
+          <router-link to="/evaluate" class="text-accent hover:text-accent-hover underline ml-2">
+            Evaluate another
+          </router-link>
+        </p>
       </div>
 
       <!-- Header -->

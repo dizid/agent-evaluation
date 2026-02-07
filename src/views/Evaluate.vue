@@ -31,6 +31,7 @@ const submitError = ref(null)
 const selectedAgentId = ref('')
 const taskDescription = ref('')
 const isSelfEval = ref(false)
+const projectName = ref('')
 const topStrength = ref('')
 const topWeakness = ref('')
 const actionItem = ref('')
@@ -147,6 +148,7 @@ async function handleSubmit() {
       scores: { ...scores },
       task_description: taskDescription.value.trim(),
       evaluator_type: isSelfEval.value ? 'self' : 'community',
+      project: projectName.value.trim() || null,
       top_strength: topStrength.value.trim() || null,
       top_weakness: topWeakness.value.trim() || null,
       action_item: actionItem.value.trim() || null
@@ -200,6 +202,16 @@ async function handleSubmit() {
           <input type="checkbox" v-model="isSelfEval" class="rounded border-eval-border" />
           This is a self-evaluation
         </label>
+        <span v-if="isSelfEval" class="text-text-muted text-xs ml-6">
+          Self-evaluations are weighted at 0.8x in scoring
+        </span>
+        <input
+          v-model="projectName"
+          type="text"
+          placeholder="Project name (optional)"
+          aria-label="Project name"
+          class="w-full bg-eval-surface text-text-primary border border-eval-border rounded-lg px-4 py-3 text-sm placeholder:text-text-muted"
+        />
       </section>
 
       <!-- Step 3: Universal Criteria -->

@@ -45,6 +45,12 @@ async function handleList(req: Request): Promise<Response> {
     const sort = url.searchParams.get('sort') || 'name'
     const status = url.searchParams.get('status') // 'all' shows everything, default = active only
 
+    // Validate min_score if provided
+    if (minScore) {
+      const parsed = parseFloat(minScore)
+      if (isNaN(parsed)) return error('min_score must be a valid number', 400)
+    }
+
     // Query with tagged template literals (neon driver requirement)
     let agents
     if (status === 'all') {

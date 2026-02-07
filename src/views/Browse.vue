@@ -96,8 +96,11 @@ const filteredAgents = computed(() => {
     <div v-else-if="error" class="text-score-failing text-center py-12">{{ error }}</div>
 
     <!-- Empty -->
-    <div v-else-if="filteredAgents.length === 0" class="text-text-muted text-center py-12">
-      No agents found for this filter.
+    <div v-else-if="filteredAgents.length === 0" class="text-center py-12">
+      <p class="text-text-muted">No agents found for this filter.</p>
+      <button v-if="deptFilter !== 'all'" @click="deptFilter = 'all'" class="mt-3 text-accent hover:text-accent-hover text-sm underline">
+        Clear filters
+      </button>
     </div>
 
     <!-- Grid -->

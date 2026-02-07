@@ -72,6 +72,9 @@ const kpiNames = computed(() => {
           <ScoreBadge :score="evaluation.overall" size="sm" />
           <RatingLabel :label="ratingLabel" size="sm" />
           <span class="text-text-muted text-xs">{{ evaluatorLabel }}</span>
+          <span v-if="evaluation.project" class="text-xs text-text-muted bg-eval-surface px-2 py-0.5 rounded">
+            {{ evaluation.project }}
+          </span>
         </div>
         <p v-if="evaluation.task_description" class="text-text-secondary text-sm mt-1.5 line-clamp-2">
           {{ evaluation.task_description }}
