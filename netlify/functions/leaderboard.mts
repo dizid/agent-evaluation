@@ -15,7 +15,8 @@ export default async function handler(req: Request) {
         SELECT id, name, department, role, overall_score, rating_label,
                eval_count, confidence, trend
         FROM agents
-        WHERE department = ${department}
+        WHERE (status = 'active' OR status IS NULL)
+          AND department = ${department}
         ORDER BY overall_score DESC NULLS LAST
       `
     } else {
@@ -23,6 +24,7 @@ export default async function handler(req: Request) {
         SELECT id, name, department, role, overall_score, rating_label,
                eval_count, confidence, trend
         FROM agents
+        WHERE (status = 'active' OR status IS NULL)
         ORDER BY overall_score DESC NULLS LAST
       `
     }
@@ -35,6 +37,7 @@ export default async function handler(req: Request) {
              SUM(eval_count) as total_evals
       FROM agents
       WHERE overall_score IS NOT NULL
+        AND (status = 'active' OR status IS NULL)
       GROUP BY department
       ORDER BY avg_score DESC
     `

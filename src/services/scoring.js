@@ -91,6 +91,8 @@ export function getDeptColor(department) {
     case 'development': return 'text-dept-dev'
     case 'marketing': return 'text-dept-marketing'
     case 'operations': return 'text-dept-ops'
+    case 'tools': return 'text-dept-tools'
+    case 'trading': return 'text-dept-trading'
     default: return 'text-text-secondary'
   }
 }

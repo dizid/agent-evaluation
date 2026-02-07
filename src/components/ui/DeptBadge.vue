@@ -13,6 +13,8 @@ const bgClass = computed(() => {
     case 'development': return 'bg-dept-dev/10 border-dept-dev/20'
     case 'marketing': return 'bg-dept-marketing/10 border-dept-marketing/20'
     case 'operations': return 'bg-dept-ops/10 border-dept-ops/20'
+    case 'tools': return 'bg-dept-tools/10 border-dept-tools/20'
+    case 'trading': return 'bg-dept-trading/10 border-dept-trading/20'
     default: return 'bg-white/5 border-eval-border'
   }
 })
@@ -22,6 +24,8 @@ const label = computed(() => {
     case 'development': return 'Dev'
     case 'marketing': return 'Marketing'
     case 'operations': return 'Ops'
+    case 'tools': return 'Tools'
+    case 'trading': return 'Trading'
     default: return props.department
   }
 })

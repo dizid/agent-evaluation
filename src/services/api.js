@@ -43,3 +43,21 @@ export const getCriteria = (params = {}) => {
 
 // Categories
 export const getCategories = () => request('/categories')
+
+// Agent Management
+export const createAgent = (data) => request('/agents', {
+  method: 'POST',
+  body: JSON.stringify(data)
+})
+
+export const updateAgent = (id, data) => request(`/agents/${id}/update`, {
+  method: 'PUT',
+  body: JSON.stringify(data)
+})
+
+export const updateAgentStatus = (id, status) => request(`/agents/${id}/status`, {
+  method: 'PATCH',
+  body: JSON.stringify({ status })
+})
+
+export const getActionItems = (id) => request(`/agents/${id}/action-items`)

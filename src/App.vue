@@ -22,6 +22,11 @@ import { RouterLink, RouterView } from 'vue-router'
             active-class="text-text-primary"
           >Leaderboard</RouterLink>
           <RouterLink
+            to="/manage"
+            class="text-text-secondary hover:text-text-primary transition-colors"
+            active-class="text-text-primary"
+          >Manage</RouterLink>
+          <RouterLink
             to="/evaluate"
             class="px-3 py-1.5 bg-accent hover:bg-accent-hover rounded-lg text-white text-sm transition-colors"
           >Evaluate</RouterLink>

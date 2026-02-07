@@ -27,6 +27,16 @@ const routes = [
     component: () => import('../views/Evaluate.vue')
   },
   {
+    path: '/manage',
+    name: 'manage',
+    component: () => import('../views/AgentManage.vue')
+  },
+  {
+    path: '/agent/:id/edit',
+    name: 'agent-edit',
+    component: () => import('../views/AgentEdit.vue')
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('../views/NotFound.vue')

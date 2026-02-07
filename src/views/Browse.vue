@@ -16,7 +16,9 @@ const departments = [
   { value: 'all', label: 'All' },
   { value: 'development', label: 'Development' },
   { value: 'marketing', label: 'Marketing' },
-  { value: 'operations', label: 'Operations' }
+  { value: 'operations', label: 'Operations' },
+  { value: 'tools', label: 'Tools' },
+  { value: 'trading', label: 'Trading' }
 ]
 
 onMounted(async () => {

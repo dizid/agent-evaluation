@@ -12,6 +12,7 @@ export default async function handler(req: Request) {
         COUNT(*)::int AS count,
         ROUND(AVG(overall_score), 1) AS avg_score
       FROM agents
+      WHERE (status = 'active' OR status IS NULL)
       GROUP BY department
       ORDER BY department
     `
