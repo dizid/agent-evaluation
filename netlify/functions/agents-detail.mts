@@ -11,12 +11,11 @@ export default async function handler(req: Request) {
     // segments: ['api', 'agents', ':id'] or ['api', 'agents', ':id', 'action-items']
     const agentIndex = segments.indexOf('agents')
     const id = agentIndex >= 0 ? segments[agentIndex + 1] : null
-    const subRoute = segments[agentIndex + 2] || null
 
     if (!id) return error('Agent ID is required', 400)
 
-    // Route: GET /api/agents/:id/action-items
-    if (req.method === 'GET' && subRoute === 'action-items') {
+    // Route: GET /api/agents/:id?include=action_items
+    if (req.method === 'GET' && url.searchParams.get('include') === 'action_items') {
       return handleActionItems(id)
     }
 
@@ -139,5 +138,5 @@ async function handleActionItems(id: string) {
 }
 
 export const config: Config = {
-  path: ['/api/agents/:id', '/api/agents/:id/action-items']
+  path: '/api/agents/:id'
 }

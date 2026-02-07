@@ -60,4 +60,4 @@ export const updateAgentStatus = (id, status) => request(`/agents/${id}`, {
   body: JSON.stringify({ status })
 })
 
-export const getActionItems = (id) => request(`/agents/${id}/action-items`)
+export const getActionItems = (id) => request(`/agents/${id}?include=action_items`)
