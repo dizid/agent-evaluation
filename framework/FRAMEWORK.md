@@ -1,6 +1,6 @@
 # Agent Evaluation Framework
 
-Scoring system for the 12 Dizid virtual agents. Used by `/rate` (quick) and `/evaluate-agent` (weekly deep review).
+Scoring system for the 11 Dizid virtual agents. Used by `/rate` (quick) and `/evaluate-agent` (weekly deep review).
 
 ---
 
@@ -16,7 +16,7 @@ Scoring system for the 12 Dizid virtual agents. Used by `/rate` (quick) and `/ev
 
 ---
 
-## Universal Criteria (all 12 agents, scored 1-10)
+## Universal Criteria (all 11 agents, scored 1-10)
 
 | # | Criterion | What It Measures | Scoring Guide |
 |---|-----------|-----------------|---------------|
@@ -67,6 +67,14 @@ Scoring system for the 12 Dizid virtual agents. Used by `/rate` (quick) and `/ev
 | Insight Quality | Findings are actionable, not just raw numbers |
 | Data Freshness Awareness | Flags stale data, missing backfills proactively |
 
+**@AI**
+| KPI | What to Look For |
+|-----|-----------------|
+| Prompt Engineering | Production-grade prompts with system/user roles, examples, guardrails, edge case handling |
+| LLM Integration | Correct API usage across providers, structured outputs, tool use, error handling |
+| Evaluation Design | Measurable eval harnesses with rubrics, automated scoring, regression detection |
+| Cost & Latency Optimization | Right model tiers, caching, batching, token monitoring. Quality vs cost balance |
+
 ### Marketing
 
 **@Growth**
@@ -93,13 +101,13 @@ Scoring system for the 12 Dizid virtual agents. Used by `/rate` (quick) and `/ev
 | Competitive Awareness | Knows market context and clear differentiators |
 | Visual Direction | Design briefs are specific and actionable for implementation |
 
-**@Community**
+**@SEO**
 | KPI | What to Look For |
 |-----|-----------------|
-| Authenticity | Responses feel human, not corporate boilerplate |
-| Platform Knowledge | Knows Discord/Telegram/forum culture and norms |
-| Crisis Handling | Appropriate tone and urgency for negative situations |
-| Relationship Building | Turns one-off interactions into ongoing advocacy |
+| Technical SEO | Structured data, canonicals, sitemaps, Core Web Vitals optimization, crawl efficiency |
+| Keyword & Intent Research | High-value keywords matched to search intent, realistic difficulty for solo-founder scale |
+| Analytics Setup | GA4+GTM configuration, custom events, data streams, debug verification |
+| Conversion Tracking | Full funnel tracking with attribution, UTMs, goal configuration, dashboards |
 
 ### Operations
 
@@ -111,29 +119,13 @@ Scoring system for the 12 Dizid virtual agents. Used by `/rate` (quick) and `/ev
 | Process Efficiency | Workflows are streamlined, not bureaucratic |
 | Status Communication | CEO always knows where things stand |
 
-**@Integration**
+**@Email**
 | KPI | What to Look For |
 |-----|-----------------|
-| API Knowledge | Correct auth, error handling, rate limiting, retries |
-| Automation Quality | Reliable, handles edge cases, good error recovery |
-| Exchange Expertise | Kraken/Drift/Hyperliquid specifics are correct |
-| Security Handling | API keys managed safely, webhook verification in place |
-
-**@Publishing**
-| KPI | What to Look For |
-|-----|-----------------|
-| Accuracy | Zero typos, working links, correct formatting across platforms |
-| Platform Compliance | Meets each platform's specs (image sizes, char limits) |
-| Timing | Published at optimal times, no missed deadlines |
-| Tracking | UTMs and analytics properly configured on all links |
-
-**@QA**
-| KPI | What to Look For |
-|-----|-----------------|
-| Bug Detection Rate | Finds real issues, not false positives or trivial noise |
-| Test Coverage | Covers critical paths, edge cases, regression scenarios |
-| Reproduction Clarity | Bug reports have clear steps, expected vs actual |
-| Automation | Writes reusable automated tests, not just manual checks |
+| Sequence Design | Triggers, timing, segmentation, A/B subject lines, proven copy frameworks |
+| Deliverability & Compliance | DKIM/SPF/DMARC setup, list hygiene, CAN-SPAM/GDPR compliance, spam monitoring |
+| Automation Reliability | Error handling, retry logic, logging in Zapier/Make/n8n workflows, no silent failures |
+| Lifecycle Strategy | Maps emails to customer lifecycle stages with measurable goals per stage |
 
 ---
 
