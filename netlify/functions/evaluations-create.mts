@@ -13,6 +13,19 @@ import {
   bayesianScore
 } from './utils/scoring.ts'
 
+// Strip HTML tags from a string to prevent XSS
+function stripHtml(str: string): string {
+  return str.replace(/<[^>]*>/g, '')
+}
+
+// Validate and sanitize an optional text field
+function validateTextField(value: unknown, fieldName: string, maxLength: number): { valid: boolean; sanitized: string | null; error?: string } {
+  if (value === undefined || value === null || value === '') return { valid: true, sanitized: null }
+  if (typeof value !== 'string') return { valid: false, sanitized: null, error: `${fieldName} must be a string` }
+  if (value.length > maxLength) return { valid: false, sanitized: null, error: `${fieldName} must be max ${maxLength} characters` }
+  return { valid: true, sanitized: stripHtml(value) }
+}
+
 export default async function handler(req: Request) {
   if (req.method === 'OPTIONS') return cors()
   if (req.method !== 'POST') return error('Method not allowed', 405)
@@ -31,13 +44,46 @@ export default async function handler(req: Request) {
       return error('agent_id and scores are required', 400)
     }
 
+    // Validate agent_id format
+    if (typeof agent_id !== 'string' || !/^[a-z0-9-]{2,50}$/.test(agent_id)) {
+      return error('agent_id must be 2-50 lowercase alphanumeric characters or hyphens', 400)
+    }
+
     // Validate evaluator_type
     const validEvaluatorTypes = ['self', 'auto', 'manual', 'community']
     if (evaluator_type && !validEvaluatorTypes.includes(evaluator_type)) {
       return error(`evaluator_type must be one of: ${validEvaluatorTypes.join(', ')}`, 400)
     }
 
+    // Validate text field lengths and strip HTML
+    const taskDescResult = validateTextField(task_description, 'task_description', 2000)
+    if (!taskDescResult.valid) return error(taskDescResult.error!, 400)
+
+    const actionItemResult = validateTextField(action_item, 'action_item', 500)
+    if (!actionItemResult.valid) return error(actionItemResult.error!, 400)
+
+    const topStrengthResult = validateTextField(top_strength, 'top_strength', 500)
+    if (!topStrengthResult.valid) return error(topStrengthResult.error!, 400)
+
+    const topWeaknessResult = validateTextField(top_weakness, 'top_weakness', 500)
+    if (!topWeaknessResult.valid) return error(topWeaknessResult.error!, 400)
+
+    // Validate project field: alphanumeric + dots + hyphens + underscores, max 100 chars (or empty)
+    let sanitizedProject: string | null = null
+    if (project !== undefined && project !== null && project !== '') {
+      if (typeof project !== 'string' || project.length > 100) {
+        return error('project must be a string of max 100 characters', 400)
+      }
+      if (!/^[a-zA-Z0-9._-]+$/.test(project)) {
+        return error('project must contain only alphanumeric characters, dots, hyphens, and underscores', 400)
+      }
+      sanitizedProject = project
+    }
+
     // Validate scores: must be integers 1-10, at least one required, max 20 entries
+    if (typeof scores !== 'object' || scores === null || Array.isArray(scores)) {
+      return error('scores must be an object', 400)
+    }
     const scoreEntries = Object.entries(scores)
     if (scoreEntries.length === 0) {
       return error('At least one score is required', 400)
@@ -92,7 +138,7 @@ export default async function handler(req: Request) {
     const overall = calculateOverall(adjustedScores, kpiNames)
     const ratingLabel = getRatingLabel(overall)
 
-    // 5. Store evaluation
+    // 5. Store evaluation (use sanitized text fields)
     const evalResult = await sql`
       INSERT INTO evaluations (
         agent_id, evaluator_type, task_description, scores,
@@ -102,18 +148,18 @@ export default async function handler(req: Request) {
       ) VALUES (
         ${agent_id},
         ${evaluator_type || 'manual'},
-        ${task_description || null},
+        ${taskDescResult.sanitized},
         ${JSON.stringify(adjustedScores)},
         ${universalAvg},
         ${roleAvg},
         ${overall},
         ${ratingLabel},
-        ${top_strength || null},
-        ${top_weakness || null},
-        ${action_item || null},
+        ${topStrengthResult.sanitized},
+        ${topWeaknessResult.sanitized},
+        ${actionItemResult.sanitized},
         ${selfEval},
         ${weight},
-        ${project || null}
+        ${sanitizedProject}
       )
       RETURNING *
     `
@@ -164,7 +210,7 @@ export default async function handler(req: Request) {
         confidence,
         trend
       }
-    }, 201)
+    }, 201, { 'Cache-Control': 'no-cache' })
   } catch (err) {
     console.error('evaluations-create error:', err)
     return error('Failed to create evaluation', 500)

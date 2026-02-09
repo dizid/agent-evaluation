@@ -4,48 +4,64 @@ const routes = [
   {
     path: '/',
     name: 'landing',
-    component: () => import('../views/Landing.vue')
+    component: () => import('../views/Landing.vue'),
+    meta: { title: 'AgentEval — AI Agent Evaluation' }
   },
   {
     path: '/browse',
     name: 'browse',
-    component: () => import('../views/Browse.vue')
+    component: () => import('../views/Browse.vue'),
+    meta: { title: 'Browse Agents — AgentEval' }
   },
   {
     path: '/agent/:id',
     name: 'agent-detail',
-    component: () => import('../views/AgentDetail.vue')
+    component: () => import('../views/AgentDetail.vue'),
+    meta: { title: 'Agent Detail — AgentEval' }
   },
   {
     path: '/leaderboard',
     name: 'leaderboard',
-    component: () => import('../views/Leaderboard.vue')
+    component: () => import('../views/Leaderboard.vue'),
+    meta: { title: 'Leaderboard — AgentEval' }
   },
   {
     path: '/evaluate',
     name: 'evaluate',
-    component: () => import('../views/Evaluate.vue')
+    component: () => import('../views/Evaluate.vue'),
+    meta: { title: 'Evaluate Agent — AgentEval' }
   },
   {
     path: '/manage',
     name: 'manage',
-    component: () => import('../views/AgentManage.vue')
+    component: () => import('../views/AgentManage.vue'),
+    meta: { title: 'Manage Agents — AgentEval' }
   },
   {
     path: '/agent/:id/edit',
     name: 'agent-edit',
-    component: () => import('../views/AgentEdit.vue')
+    component: () => import('../views/AgentEdit.vue'),
+    meta: { title: 'Edit Agent — AgentEval' }
   },
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
-    component: () => import('../views/NotFound.vue')
+    component: () => import('../views/NotFound.vue'),
+    meta: { title: '404 — AgentEval' }
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior() {
+    return { top: 0 }
+  }
+})
+
+// Set page title from route meta
+router.afterEach((to) => {
+  document.title = to.meta.title || 'AgentEval'
 })
 
 // Auto-reload on stale chunks after deploy (new build = new hashes)

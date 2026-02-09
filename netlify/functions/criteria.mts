@@ -37,7 +37,11 @@ export default async function handler(req: Request) {
       `
     }
 
-    return json({ criteria })
+    return json(
+      { criteria },
+      200,
+      { 'Cache-Control': 'public, max-age=300' }
+    )
   } catch (err) {
     console.error('criteria error:', err)
     return error('Failed to fetch criteria', 500)

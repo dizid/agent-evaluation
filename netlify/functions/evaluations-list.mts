@@ -17,9 +17,25 @@ export default async function handler(req: Request) {
       return error('Agent ID is required', 400)
     }
 
+    // Validate agent ID format
+    if (!/^[a-z0-9-]{2,50}$/.test(id)) {
+      return error('Invalid agent ID format', 400)
+    }
+
+    // Validate limit/offset are positive integers
+    const limitRaw = url.searchParams.get('limit')
+    const offsetRaw = url.searchParams.get('offset')
+
+    if (limitRaw !== null && (!/^\d+$/.test(limitRaw) || parseInt(limitRaw, 10) < 1)) {
+      return error('limit must be a positive integer', 400)
+    }
+    if (offsetRaw !== null && (!/^\d+$/.test(offsetRaw) || parseInt(offsetRaw, 10) < 0)) {
+      return error('offset must be a non-negative integer', 400)
+    }
+
     // Parse pagination params
-    const limitParam = parseInt(url.searchParams.get('limit') || '20', 10)
-    const offsetParam = parseInt(url.searchParams.get('offset') || '0', 10)
+    const limitParam = parseInt(limitRaw || '20', 10)
+    const offsetParam = parseInt(offsetRaw || '0', 10)
     const limit = Math.min(Math.max(1, isNaN(limitParam) ? 20 : limitParam), 100)
     const offset = Math.max(0, isNaN(offsetParam) ? 0 : offsetParam)
 
@@ -40,7 +56,11 @@ export default async function handler(req: Request) {
       LIMIT ${limit} OFFSET ${offset}
     `
 
-    return json({ evaluations, total, limit, offset })
+    return json(
+      { evaluations, total, limit, offset },
+      200,
+      { 'Cache-Control': 'public, max-age=30' }
+    )
   } catch (err) {
     console.error('evaluations-list error:', err)
     return error('Failed to fetch evaluations', 500)

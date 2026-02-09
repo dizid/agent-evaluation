@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { getScoreColor, getScoreBgColor } from '@/services/scoring'
+import { getScoreColor, getScoreBgColor, getRatingLabel } from '@/services/scoring'
 
 const props = defineProps({
   score: { type: Number, default: null },
@@ -21,12 +21,28 @@ const sizeClasses = computed(() => {
 const displayScore = computed(() =>
   props.score != null ? Number(props.score).toFixed(1) : '--'
 )
+
+const isElite = computed(() => props.score != null && props.score >= 9.0)
+
+const tooltipText = computed(() => {
+  if (props.score == null) return 'No score yet'
+  const label = getRatingLabel(props.score) || ''
+  return `Performance score: ${displayScore.value} / 10 (${label})`
+})
+
+const ariaText = computed(() => {
+  if (props.score == null) return 'Score not available'
+  return `Score ${displayScore.value} out of 10`
+})
 </script>
 
 <template>
   <span
-    :class="[colorClass, bgClass, sizeClasses]"
-    class="inline-flex items-center justify-center tabular-nums"
+    :class="[colorClass, bgClass, sizeClasses, { 'animate-pulse-glow': isElite }]"
+    class="badge-tooltip inline-flex items-center justify-center tabular-nums animate-fade-in"
+    :data-tooltip="tooltipText"
+    role="status"
+    :aria-label="ariaText"
   >
     {{ displayScore }}
   </span>

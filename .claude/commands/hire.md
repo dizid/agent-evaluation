@@ -88,4 +88,4 @@ Show:
 - Agent file created at: `agents/[agent_id].md`
 - Database entry created with 4 KPIs
 - Dashboard link: `https://dizid-agenteval.netlify.app/agent/[agent_id]`
-- Remind: run `scripts/install-hooks.sh /path/to/project [agent_id]` to deploy to a project
+- Remind: run `/deploy-agents` to sync to `~/.claude/agents/` (makes it available globally)

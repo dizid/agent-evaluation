@@ -17,6 +17,15 @@ function onInput(event) {
   emit('update:modelValue', Number(event.target.value))
 }
 
+// Descriptive label for the current score range
+const scoreLabel = computed(() => {
+  if (props.modelValue >= 9) return 'Exceptional'
+  if (props.modelValue >= 7) return 'Strong'
+  if (props.modelValue >= 5) return 'Average'
+  if (props.modelValue >= 3) return 'Below Avg'
+  return 'Poor'
+})
+
 // Thumb color for the range input based on score
 const thumbColor = computed(() => {
   if (props.modelValue >= 9) return '#00ff88'
@@ -25,6 +34,9 @@ const thumbColor = computed(() => {
   if (props.modelValue >= 3) return '#ff6b4a'
   return '#ff4757'
 })
+
+// Track fill percentage for visual feedback
+const fillPercent = computed(() => ((props.modelValue - 1) / 9) * 100)
 </script>
 
 <template>
@@ -33,16 +45,21 @@ const thumbColor = computed(() => {
     <div class="flex items-start justify-between gap-3 mb-1">
       <div class="min-w-0 flex-1">
         <div class="text-text-primary font-medium text-sm">{{ label }}</div>
-        <div v-if="description" class="text-text-muted text-xs mt-0.5 line-clamp-2">
+        <div v-if="description" class="text-text-muted text-xs mt-0.5 leading-relaxed">
           {{ description }}
         </div>
       </div>
-      <span
-        :class="[scoreColor, scoreBg]"
-        class="text-xl font-bold px-3 py-1 rounded-lg tabular-nums shrink-0"
-      >
-        {{ modelValue }}
-      </span>
+      <div class="flex items-center gap-2 shrink-0">
+        <span :class="scoreColor" class="text-xs font-medium uppercase tracking-wide hidden sm:inline">
+          {{ scoreLabel }}
+        </span>
+        <span
+          :class="[scoreColor, scoreBg]"
+          class="text-xl font-bold px-3 py-1 rounded-lg tabular-nums"
+        >
+          {{ modelValue }}
+        </span>
+      </div>
     </div>
 
     <!-- Slider -->
@@ -54,28 +71,25 @@ const thumbColor = computed(() => {
         step="1"
         :value="modelValue"
         @input="onInput"
-        :aria-label="label"
+        :aria-label="`${label} score`"
         :aria-valuenow="modelValue"
         aria-valuemin="1"
         aria-valuemax="10"
-        class="w-full h-2 rounded-full appearance-none cursor-pointer bg-eval-surface
+        class="score-slider w-full h-2 rounded-full appearance-none cursor-pointer bg-eval-surface
                [&::-webkit-slider-thumb]:appearance-none
                [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6
                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
-               [&::-webkit-slider-thumb]:shadow-lg
+               [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:relative
+               [&::-webkit-slider-thumb]:z-10
                [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:h-6
                [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:cursor-pointer
                [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-lg"
-        :style="{
-          '--tw-shadow-color': thumbColor,
-          '--webkit-slider-thumb-bg': thumbColor
-        }"
       />
       <!-- Scale labels -->
-      <div class="flex justify-between text-[10px] text-text-muted mt-1 px-0.5">
-        <span>1</span>
-        <span>5</span>
-        <span>10</span>
+      <div class="flex justify-between text-[10px] text-text-muted mt-1.5 px-0.5">
+        <span>1 Poor</span>
+        <span class="hidden sm:inline">5 Average</span>
+        <span>10 Exceptional</span>
       </div>
     </div>
   </div>
@@ -87,5 +101,15 @@ input[type="range"]::-webkit-slider-thumb {
 }
 input[type="range"]::-moz-range-thumb {
   background: v-bind(thumbColor);
+}
+/* Track fill gradient */
+input[type="range"].score-slider {
+  background: linear-gradient(
+    to right,
+    v-bind(thumbColor) 0%,
+    v-bind(thumbColor) v-bind(fillPercent + '%'),
+    rgba(255, 255, 255, 0.08) v-bind(fillPercent + '%'),
+    rgba(255, 255, 255, 0.08) 100%
+  );
 }
 </style>

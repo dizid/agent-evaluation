@@ -1,5 +1,34 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
-.env
 .netlify/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
 *.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Vite
+*.local
+
+# Editor swap/backup
+*.swp
+*.swo
+*~
+
+# Misc
+*.txt

@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, MinusIcon, ChartBarIcon } from '@heroicons/vue/24/outline'
 import ScoreBadge from '@/components/ui/ScoreBadge.vue'
 import RatingLabel from '@/components/ui/RatingLabel.vue'
 import DeptBadge from '@/components/ui/DeptBadge.vue'
@@ -10,13 +11,12 @@ const props = defineProps({
   agent: { type: Object, required: true }
 })
 
-// Trend stored as string: 'up', 'down', 'stable'
-const trendArrow = computed(() => {
+const trendIcon = computed(() => {
   const t = props.agent.trend
-  if (t === 'up') return '\u2191'
-  if (t === 'down') return '\u2193'
-  if (t === 'stable') return '\u2192'
-  return ''
+  if (t === 'up') return ArrowTrendingUpIcon
+  if (t === 'down') return ArrowTrendingDownIcon
+  if (t === 'stable') return MinusIcon
+  return null
 })
 
 const trendColor = computed(() => {
@@ -25,20 +25,36 @@ const trendColor = computed(() => {
   if (t === 'down') return 'text-score-failing'
   return 'text-text-muted'
 })
+
+const trendLabel = computed(() => {
+  const t = props.agent.trend
+  if (t === 'up') return 'Trending up'
+  if (t === 'down') return 'Trending down'
+  if (t === 'stable') return 'Stable'
+  return ''
+})
 </script>
 
 <template>
   <RouterLink
     :to="`/agent/${agent.id}`"
-    class="glass-card block p-4 min-h-[120px] active:scale-[0.98] transition-transform"
+    class="agent-card glass-card block p-4 min-h-[120px] active:scale-[0.98] transition-all duration-200"
   >
-    <!-- Header: name + department -->
-    <div class="flex items-start justify-between gap-2 mb-3">
-      <div class="min-w-0">
+    <!-- Header: score badge + name -->
+    <div class="flex items-start gap-3 mb-3">
+      <ScoreBadge :score="agent.overall_score" size="md" />
+      <div class="min-w-0 flex-1">
         <h3 class="text-text-primary font-semibold truncate">{{ agent.name }}</h3>
         <p class="text-text-muted text-xs mt-0.5 truncate">{{ agent.role }}</p>
       </div>
-      <ScoreBadge :score="agent.overall_score" size="md" />
+      <!-- Trend icon -->
+      <component
+        v-if="trendIcon"
+        :is="trendIcon"
+        :class="trendColor"
+        class="w-5 h-5 shrink-0"
+        :title="trendLabel"
+      />
     </div>
 
     <!-- Badges row -->
@@ -48,12 +64,21 @@ const trendColor = computed(() => {
       <ConfidenceBadge :confidence="agent.confidence" />
     </div>
 
-    <!-- Footer: eval count + trend -->
-    <div class="flex items-center justify-between text-xs text-text-muted">
+    <!-- Footer: eval count -->
+    <div class="flex items-center gap-1.5 text-xs text-text-muted">
+      <ChartBarIcon class="w-3.5 h-3.5" />
       <span>{{ agent.eval_count || 0 }} evaluations</span>
-      <span v-if="trendArrow" :class="trendColor" class="font-medium">
-        {{ trendArrow }}
-      </span>
     </div>
   </RouterLink>
 </template>
+
+<style scoped>
+.agent-card {
+  transform: translateY(0);
+}
+
+.agent-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.1);
+}
+</style>

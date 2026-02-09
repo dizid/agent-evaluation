@@ -17,7 +17,11 @@ export default async function handler(req: Request) {
       ORDER BY department
     `
 
-    return json({ categories })
+    return json(
+      { categories },
+      200,
+      { 'Cache-Control': 'public, max-age=300' }
+    )
   } catch (err) {
     console.error('categories error:', err)
     return error('Failed to fetch categories', 500)

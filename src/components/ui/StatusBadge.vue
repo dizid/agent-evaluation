@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { CheckCircleIcon, ArchiveBoxIcon, XCircleIcon } from '@heroicons/vue/20/solid'
 
 const props = defineProps({
   status: { type: String, required: true }
@@ -22,13 +23,35 @@ const label = computed(() => {
     default: return props.status
   }
 })
+
+const iconComponent = computed(() => {
+  switch (props.status) {
+    case 'active': return CheckCircleIcon
+    case 'archived': return ArchiveBoxIcon
+    case 'fired': return XCircleIcon
+    default: return null
+  }
+})
+
+const tooltipText = computed(() => {
+  switch (props.status) {
+    case 'active': return 'Status: Active \u2014 visible in Browse and Leaderboard'
+    case 'archived': return 'Status: Archived \u2014 hidden from active views'
+    case 'fired': return 'Status: Fired \u2014 removed from active roster'
+    default: return `Status: ${props.status}`
+  }
+})
 </script>
 
 <template>
   <span
     :class="colorClass"
-    class="inline-flex items-center text-xs px-2 py-0.5 rounded-full border font-medium"
+    class="badge-tooltip inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium"
+    :data-tooltip="tooltipText"
+    role="status"
+    :aria-label="tooltipText"
   >
+    <component :is="iconComponent" v-if="iconComponent" class="w-3 h-3" />
     {{ label }}
   </span>
 </template>

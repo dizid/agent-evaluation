@@ -2,6 +2,11 @@ import type { Config } from '@netlify/functions'
 import { sql } from './utils/database.ts'
 import { json, error, cors } from './utils/response.ts'
 
+// Strip HTML tags from a string to prevent XSS
+function stripHtml(str: string): string {
+  return str.replace(/<[^>]*>/g, '')
+}
+
 export default async function handler(req: Request) {
   if (req.method === 'OPTIONS') return cors()
 
@@ -13,6 +18,11 @@ export default async function handler(req: Request) {
     const id = agentIndex >= 0 ? segments[agentIndex + 1] : null
 
     if (!id) return error('Agent ID is required', 400)
+
+    // Validate agent ID format
+    if (!/^[a-z0-9-]{2,50}$/.test(id)) {
+      return error('Invalid agent ID format', 400)
+    }
 
     // Route: GET /api/agents/:id?include=action_items
     if (req.method === 'GET' && url.searchParams.get('include') === 'action_items') {
@@ -53,10 +63,11 @@ async function handleDetail(id: string) {
     LIMIT 1
   `
 
-  return json({
-    agent: agents[0],
-    latest_evaluation: evaluations[0] || null
-  })
+  return json(
+    { agent: agents[0], latest_evaluation: evaluations[0] || null },
+    200,
+    { 'Cache-Control': 'public, max-age=30' }
+  )
 }
 
 // PUT /api/agents/:id — update agent fields
@@ -66,6 +77,23 @@ async function handleUpdate(id: string, req: Request) {
 
   const body = await req.json()
   const agent = existing[0]
+
+  // Validate field lengths
+  if (body.name !== undefined) {
+    if (typeof body.name !== 'string' || body.name.length > 100) {
+      return error('name must be a string of max 100 characters', 400)
+    }
+  }
+  if (body.role !== undefined) {
+    if (typeof body.role !== 'string' || body.role.length > 200) {
+      return error('role must be a string of max 200 characters', 400)
+    }
+  }
+  if (body.persona !== undefined) {
+    if (typeof body.persona !== 'string' || body.persona.length > 5000) {
+      return error('persona must be a string of max 5000 characters', 400)
+    }
+  }
 
   // Validate department if provided
   const validDepartments = ['development', 'marketing', 'operations', 'tools', 'trading']
@@ -78,10 +106,11 @@ async function handleUpdate(id: string, req: Request) {
     return error('kpi_definitions must be an array of strings', 400)
   }
 
-  const name = body.name ?? agent.name
+  // Strip HTML from text inputs
+  const name = stripHtml(body.name ?? agent.name)
   const department = body.department ?? agent.department
-  const role = body.role ?? agent.role
-  const persona = body.persona ?? agent.persona
+  const role = stripHtml(body.role ?? agent.role)
+  const persona = stripHtml(body.persona ?? agent.persona)
   const kpi_definitions = body.kpi_definitions !== undefined
     ? JSON.stringify(body.kpi_definitions)
     : JSON.stringify(agent.kpi_definitions)

@@ -42,7 +42,11 @@ export default async function handler(req: Request) {
       ORDER BY avg_score DESC
     `
 
-    return json({ agents, department_averages: deptAvgs })
+    return json(
+      { agents, department_averages: deptAvgs },
+      200,
+      { 'Cache-Control': 'public, max-age=60' }
+    )
   } catch (err) {
     console.error('leaderboard error:', err)
     return error('Failed to fetch leaderboard', 500)

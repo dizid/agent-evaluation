@@ -66,11 +66,6 @@ Remove the agent definition file:
 rm -f /home/marc/DEV/claude/agent-evaluation/agents/[agent_id].md
 ```
 
-Find and remove symlinks in all projects:
-```bash
-find /home/marc/DEV -path '*/.claude/agents/[agent_id].md' -type l -delete 2>/dev/null || true
-```
-
 ### Step 5: Update CLAUDE-TEAM.md
 
 Remove the agent's section from `/home/marc/DEV/claude/agent-evaluation/agents/CLAUDE-TEAM.md`.
@@ -83,5 +78,5 @@ Show:
 - Agent removed from database
 - [N] evaluations deleted
 - Agent file removed
-- [N] symlinks cleaned up from projects
 - CLAUDE-TEAM.md updated
+- Remind: run `/deploy-agents` to sync the removal to `~/.claude/agents/`

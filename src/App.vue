@@ -1,5 +1,6 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
+import ToastContainer from './components/ui/ToastContainer.vue'
 </script>
 
 <template>
@@ -34,9 +35,13 @@ import { RouterLink, RouterView } from 'vue-router'
       </div>
     </nav>
 
-    <!-- Main content -->
+    <!-- Main content with route transitions -->
     <main class="max-w-6xl mx-auto px-4 py-6">
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <Transition name="page" mode="out-in">
+          <component :is="Component" />
+        </Transition>
+      </RouterView>
     </main>
 
     <!-- Footer -->
@@ -45,5 +50,19 @@ import { RouterLink, RouterView } from 'vue-router'
         AgentEval — Standardized AI Agent Evaluation
       </div>
     </footer>
+
+    <!-- Toast notifications -->
+    <ToastContainer />
   </div>
 </template>
+
+<style>
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.2s ease;
+}
+.page-enter-from,
+.page-leave-to {
+  opacity: 0;
+}
+</style>

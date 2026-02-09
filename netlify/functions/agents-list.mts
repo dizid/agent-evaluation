@@ -2,6 +2,9 @@ import type { Config } from '@netlify/functions'
 import { sql } from './utils/database.ts'
 import { json, error, cors } from './utils/response.ts'
 
+const VALID_DEPARTMENTS = ['development', 'marketing', 'operations', 'tools', 'trading']
+const VALID_SORTS = ['name', 'score', 'department', 'eval_count']
+
 // POST /api/agents — Create a new agent
 async function handleCreate(req: Request): Promise<Response> {
   try {
@@ -15,6 +18,11 @@ async function handleCreate(req: Request): Promise<Response> {
     // Validate id format (lowercase alphanumeric + hyphens)
     if (!/^[a-z0-9-]{2,50}$/.test(id)) {
       return error('id must be 2-50 lowercase alphanumeric characters or hyphens', 400)
+    }
+
+    // Validate department
+    if (!VALID_DEPARTMENTS.includes(department)) {
+      return error(`department must be one of: ${VALID_DEPARTMENTS.join(', ')}`, 400)
     }
 
     // Check for duplicate
@@ -45,55 +53,65 @@ async function handleList(req: Request): Promise<Response> {
     const sort = url.searchParams.get('sort') || 'name'
     const status = url.searchParams.get('status') // 'all' shows everything, default = active only
 
+    // Validate sort param
+    if (!VALID_SORTS.includes(sort)) {
+      return error(`sort must be one of: ${VALID_SORTS.join(', ')}`, 400)
+    }
+
+    // Validate department if provided
+    if (department && !VALID_DEPARTMENTS.includes(department)) {
+      return error(`department must be one of: ${VALID_DEPARTMENTS.join(', ')}`, 400)
+    }
+
     // Validate min_score if provided
     if (minScore) {
       const parsed = parseFloat(minScore)
       if (isNaN(parsed)) return error('min_score must be a valid number', 400)
     }
 
-    // Query with tagged template literals (neon driver requirement)
+    // Build SQL ORDER BY clause based on sort param
+    // Neon tagged templates don't allow dynamic column names, so use separate queries
     let agents
     if (status === 'all') {
       // Show all agents including archived/fired (for Manage page)
       if (department) {
-        agents = await sql`SELECT * FROM agents WHERE department = ${department}`
+        if (sort === 'score') agents = await sql`SELECT * FROM agents WHERE department = ${department} ORDER BY overall_score DESC NULLS LAST`
+        else if (sort === 'eval_count') agents = await sql`SELECT * FROM agents WHERE department = ${department} ORDER BY eval_count DESC NULLS LAST`
+        else if (sort === 'department') agents = await sql`SELECT * FROM agents WHERE department = ${department} ORDER BY department, name`
+        else agents = await sql`SELECT * FROM agents WHERE department = ${department} ORDER BY name`
       } else {
-        agents = await sql`SELECT * FROM agents`
+        if (sort === 'score') agents = await sql`SELECT * FROM agents ORDER BY overall_score DESC NULLS LAST`
+        else if (sort === 'eval_count') agents = await sql`SELECT * FROM agents ORDER BY eval_count DESC NULLS LAST`
+        else if (sort === 'department') agents = await sql`SELECT * FROM agents ORDER BY department, name`
+        else agents = await sql`SELECT * FROM agents ORDER BY name`
       }
     } else if (department && minScore) {
-      agents = await sql`
-        SELECT * FROM agents
-        WHERE (status = 'active' OR status IS NULL)
-        AND department = ${department}
-        AND overall_score >= ${parseFloat(minScore)}
-      `
+      if (sort === 'score') agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND department = ${department} AND overall_score >= ${parseFloat(minScore)} ORDER BY overall_score DESC NULLS LAST`
+      else if (sort === 'eval_count') agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND department = ${department} AND overall_score >= ${parseFloat(minScore)} ORDER BY eval_count DESC NULLS LAST`
+      else if (sort === 'department') agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND department = ${department} AND overall_score >= ${parseFloat(minScore)} ORDER BY department, name`
+      else agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND department = ${department} AND overall_score >= ${parseFloat(minScore)} ORDER BY name`
     } else if (department) {
-      agents = await sql`
-        SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND department = ${department}
-      `
+      if (sort === 'score') agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND department = ${department} ORDER BY overall_score DESC NULLS LAST`
+      else if (sort === 'eval_count') agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND department = ${department} ORDER BY eval_count DESC NULLS LAST`
+      else if (sort === 'department') agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND department = ${department} ORDER BY department, name`
+      else agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND department = ${department} ORDER BY name`
     } else if (minScore) {
-      agents = await sql`
-        SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND overall_score >= ${parseFloat(minScore)}
-      `
+      if (sort === 'score') agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND overall_score >= ${parseFloat(minScore)} ORDER BY overall_score DESC NULLS LAST`
+      else if (sort === 'eval_count') agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND overall_score >= ${parseFloat(minScore)} ORDER BY eval_count DESC NULLS LAST`
+      else if (sort === 'department') agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND overall_score >= ${parseFloat(minScore)} ORDER BY department, name`
+      else agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) AND overall_score >= ${parseFloat(minScore)} ORDER BY name`
     } else {
-      agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL)`
+      if (sort === 'score') agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) ORDER BY overall_score DESC NULLS LAST`
+      else if (sort === 'eval_count') agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) ORDER BY eval_count DESC NULLS LAST`
+      else if (sort === 'department') agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) ORDER BY department, name`
+      else agents = await sql`SELECT * FROM agents WHERE (status = 'active' OR status IS NULL) ORDER BY name`
     }
 
-    // Sort in JavaScript (simple and safe with 12 agents)
-    const sorted = [...agents].sort((a: any, b: any) => {
-      switch (sort) {
-        case 'score':
-          return (parseFloat(b.overall_score) || 0) - (parseFloat(a.overall_score) || 0)
-        case 'department':
-          return (a.department || '').localeCompare(b.department || '') ||
-                 (a.name || '').localeCompare(b.name || '')
-        case 'name':
-        default:
-          return (a.name || '').localeCompare(b.name || '')
-      }
-    })
-
-    return json({ agents: sorted, total: sorted.length })
+    return json(
+      { agents, total: agents.length },
+      200,
+      { 'Cache-Control': 'public, max-age=60' }
+    )
   } catch (err) {
     console.error('agents-list error:', err)
     return error('Failed to fetch agents', 500)

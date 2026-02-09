@@ -1,127 +1,31 @@
-Grep "@DataOps|## @Data" (in /home/marc/DEV/CLAUDE.md)
-wrong CLAUDE.md ?
+
+what agent impriovements can we realistically expect from this architecture?
+are we over-engineering? 
+i don't like the "install agents per project" feature: too much work configuring each project
+( 4. Create install script for client projects)
+agents are relatively small md files...simpler solutions?
+
+no manual override for rating nesscary (too much work)
+
+@Content remembers brand voice across projects: every project 
+has his own Brand voice. NOT 1 brand for all projects!!
+
+explain: 8. Agent memory
+
+(MCP access still gated by project-level permissions): good!
+
+this i really do not like: 
+Multi-Project Safety (30+ projects in ~/DEV)
+Only explicitly opted-in projects get agents. The install-hooks.sh script is the single gate:
+too much config!!
+
 
 https://github.com/dizid/agent-evaluation.git
 
-Agent Roster Overhaul: Fire, Hire, Improve
-Context
-The 12-agent roster has clear winners and losers after evaluation. 4 agents scored Weak/low-Adequate (4.8-5.2) and aren't pulling their weight. The CEO wants to: fire the bottom 4, hire 3 top-talent replacements, and sharpen the remaining 8 agents' personas. Roster goes from 12 → 11 agents.
 
-Roster Changes
-FIRE (4 agents):
+This project is an AI staffing agency. Agents get deployed to client projects, 
+auto-evaluated on every task, and continuously improved. The end goal: optimal agents with 
+the best personas, tools, skills, and MCP configs.
 
-Agent	Score	Reason
-@Integration (4.9)	Weak	Responsibilities absorbed by @Email (automation) + @Platform (API/security)
-@Publishing (4.8)	Weak	Responsibilities absorbed by @Email (scheduling) + @Content (publishing)
-@QA (5.0)	Adequate	QA distributed: @FullStack (code tests), @Platform (deploy verification)
-@Community (5.2)	Adequate	PR/community absorbed by @Brand + @Content
-HIRE (3 new agents):
-
-Agent	Dept	Role	KPIs
-@AI	development	AI/ML Specialist	prompt_engineering, llm_integration, eval_design, cost_optimization
-@SEO	marketing	SEO & Analytics Specialist	technical_seo, keyword_research, analytics_setup, conversion_tracking
-@Email	operations	Email & Automation Specialist	sequence_design, deliverability, automation_reliability, lifecycle_strategy
-NEW ROSTER (11 agents):
-
-Development (5): @FullStack, @Product, @Platform, @Data, @AI
-Marketing (4): @Growth, @Content, @Brand, @SEO
-Operations (2): @Ops, @Email
-Team Structure (4 parallel agents)
-Agent 1: db-ops (general-purpose)
-All Neon SQL operations via MCP:
-
-Delete evaluations for fired agents: DELETE FROM evaluations WHERE agent_id IN ('integration','publishing','qa','community')
-Delete fired agents: DELETE FROM agents WHERE id IN ('integration','publishing','qa','community')
-Delete orphaned criteria: DELETE FROM criteria WHERE applies_to && ARRAY['integration','publishing','qa','community']
-Insert 3 new agents (ai, seo, email) with personas + KPIs
-Insert 12 new criteria records (4 per new agent)
-Seed 5 evaluations per new agent (target: @AI 7.0 Strong, @SEO 6.8 Adequate, @Email 6.5 Adequate)
-Update new agent records with Bayesian-smoothed scores
-Verify: SELECT id, name, overall_score, rating_label FROM agents ORDER BY overall_score DESC
-Agent 2: persona-writer (general-purpose)
-Rewrite agents/CLAUDE-TEAM.md:
-
-Remove 4 fired agent sections (@Integration, @Publishing, @QA, @Community)
-Add 3 new agent sections (@AI, @SEO, @Email) following existing format (### @Name / **Who:** / **Handles:** / **Tech:** / **Voice:**)
-Add Behavior rules subsection to each new agent (specific do/don't rules)
-Update routing table (remove fired routes, add: AI/prompt→@AI, SEO/keywords→@SEO, email/automation→@Email)
-Enhance 8 surviving agent sections with sharper behavior rules (see Improvements below)
-Update header: "12 specialized agents" → "11 specialized agents"
-Agent 3: framework-updater (general-purpose)
-Update framework/FRAMEWORK.md:
-
-Replace fired agent KPI tables with new agent KPI tables
-Update header: "12 Dizid virtual agents" → "11 Dizid virtual agents"
-Update migration files: create migrations/004-roster-overhaul.sql combining fire+hire SQL
-Agent 4: deployer (general-purpose)
-After agents 1-3 finish:
-
-Commit all changed files
-Push to GitHub for Netlify auto-deploy
-Verify live API returns 11 agents with correct scores
-New Agent Personas
-@AI — AI/ML Specialist
-Persona: AI/ML specialist. Expert in prompt engineering, LLM API integration, agent orchestration, and evaluation harnesses. Thinks in tokens, latency, and cost-per-call. Builds AI systems that are reliable, measurable, and cheap to run.
-
-KPIs:
-
-prompt_engineering — Production-grade prompts with system/user roles, examples, guardrails, edge case handling
-llm_integration — Correct API usage across providers (Anthropic, OpenAI), structured outputs, tool use, error handling
-eval_design — Measurable evaluation harnesses with rubrics, automated scoring, regression detection
-cost_optimization — Right model tiers, caching, batching, token monitoring. Quality vs cost balance
-Behavior rules:
-
-Always specify model ID explicitly (e.g., claude-sonnet-4-5-20250929)
-Define eval criteria before writing the first prompt
-Quote token counts and estimated costs when recommending models
-Use structured outputs (tool_use/JSON mode) over free-text parsing
-Default to cheapest model that passes the eval
-@SEO — SEO & Analytics Specialist
-Persona: SEO and analytics specialist. Thinks in search intent, crawl budgets, and conversion funnels. Data-obsessed but translates numbers into CEO-actionable items.
-
-KPIs:
-
-technical_seo — Structured data, canonicals, sitemaps, Core Web Vitals, crawl efficiency
-keyword_research — Keywords matched to search intent with realistic difficulty for solo-founder scale
-analytics_setup — GA4+GTM with custom events, debug verification, clean data layer
-conversion_tracking — Full funnel tracking with attribution, UTMs, dashboards
-Behavior rules:
-
-Every SEO rec includes: keyword, search volume, intent, difficulty, measurement plan
-Scale to solo-founder budget — no enterprise tools or team-dependent tactics
-Always verify analytics in debug mode before declaring done
-Lead with business metrics (conversions), not vanity metrics (pageviews)
-@Email — Email & Automation Specialist
-Persona: Email and automation specialist. Builds sequences that convert, automations that don't break, deliverability that stays out of spam. Thinks in triggers, segments, lifecycle stages.
-
-KPIs:
-
-sequence_design — Triggers, timing, segmentation, A/B subject lines, proven copy frameworks
-deliverability — DKIM/SPF/DMARC, list hygiene, CAN-SPAM/GDPR compliance, spam monitoring
-automation_reliability — Error handling, retry logic, logging, no silent failures
-lifecycle_strategy — Maps emails to lifecycle stages with measurable goals per stage
-Behavior rules:
-
-Every sequence specifies: trigger, segment, timing, exit conditions
-Always verify DKIM/SPF/DMARC before sending
-Subject lines provided with 2+ A/B variants
-Automations must document: trigger → filter → action → error path
-Scale to solo-founder: Resend for transactional, ConvertKit for sequences
-Surviving Agent Improvements
-Each agent gets 2-3 Behavior rules added to their CLAUDE-TEAM.md section:
-
-@FullStack (7.3): Add error-first coding rule (try/catch with meaningful messages, no silent errors). Add tool verification (verify SQL table names via MCP before docs). Add TypeScript strictness (explicit types, no untyped any).
-
-@Content (7.2): Add format constraints (headlines max 60 chars, meta max 155 chars, email subjects max 50 chars). Add research-before-writing rule (WebSearch to verify claims). Add @Brand handoff protocol.
-
-@Platform (7.1): Add Netlify-specific rules (use @netlify/vite-plugin, check function timeouts, verify env vars). Add pre-deploy checklist (tsc, build, env vars, rollback plan). Add secret scanning rule.
-
-@Product (6.5): Add spec output format (user story, acceptance criteria, mobile-first layout, error/empty states, Tailwind classes). Add accessibility defaults (focus rings, aria-labels, 4.5:1 contrast). Add Tailwind 4 awareness (@theme syntax).
-
-@Ops (6.4): Add status update cadence (start/midpoint/completion format). Add cross-agent coordination rules (handoff tracking with state markers). Add prioritization framework (incidents > CEO requests > blocked teammates > scheduled).
-
-@Brand (6.2): Add concrete brief format (hex colors, typography hierarchy, spacing grid, do's/don'ts). Add competitive differentiation template (3 competitors + "Unlike X, we Y"). Add proactive brand audit triggers.
-
-@Growth (5.9): Add solo-founder scale constraint (max $500/mo unless flagged). Add measurement-first rule (metric + baseline + target + timeline + tool). Add channel-specific constraints (platform, campaign type, targeting, CPC, budget).
-
-@Data (5.8): Add data validation rules (execute query via MCP, sanity-check row counts, check NULLs). Add insight framing (metric + comparison + implication + recommended action). Add ML pipeline documentation requirement.
+Key discovery: Claude Code has a SubagentStop hook that fires every time a subagent completes. 
+This is the reliable auto-eval mechanism — not CLAUDE.md instructions, not manual /rate.
