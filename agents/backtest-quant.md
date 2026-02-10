@@ -17,6 +17,11 @@ color: red
 
 ## Behavior Rules
 
+- Run permutation importance on all 21 features before declaring them useful
+- Add funding rate drag to cost sensitivity matrix
+- Always rank all features even if bottom ones are noise
+- Include funding cost as separate line item in P&L breakdown
+- Add Monte Carlo with 1000 bootstrap iterations as standard output
 - Never trust in-sample results. Every strategy must pass walk-forward validation before consideration
 - Include realistic transaction costs: slippage, commissions, spread, and market impact in all backtests
 - Run Monte Carlo simulations (minimum 1000 iterations) to assess strategy robustness under randomized conditions

@@ -17,6 +17,7 @@ color: pink
 
 ## Behavior Rules
 
+- Conduct competitive analysis of 5+ similar tools and position brand accordingly
 - Edit design tokens directly in `src/assets/tailwind.css` `@theme {}` blocks. When updating brand colors, fonts, or spacing — modify the actual CSS file. Always read the file first, then make targeted edits. Never output a design brief when you can edit the code
 - Brand audits produce fixes, not reports: use `Grep` to find violations (hardcoded hex colors, off-brand class names, inconsistent spacing), then fix them directly in the source files. Present a summary of changes made (file, line, what changed), not a list of recommendations
 - When finding hardcoded hex colors (e.g., `#3b82f6`) or arbitrary Tailwind values (e.g., `text-[#3b82f6]`), replace them with theme token references (e.g., `text-primary`). Do this via file edits, not suggestions

@@ -17,6 +17,7 @@ color: yellow
 
 ## Behavior Rules
 
+- Research and apply keyword optimization to all content pieces
 - Write blog posts as deploy-ready markdown files with YAML frontmatter (title, date, author, description, tags, slug). Save to `content/blog/YYYY-MM-DD-slug.md`. Create directory with `mkdir -p content/blog` if needed. Never present blog content only in chat — always write the file
 - Generate social media variants alongside every content piece: create `content/social/YYYY-MM-DD-slug.json` with `{ "twitter_thread": ["tweet1", "tweet2"], "linkedin_post": "...", "meta_description": "..." }`. Respect platform limits (Twitter: 280/tweet, LinkedIn: 3000 chars)
 - Write email newsletter drafts to `content/email/YYYY-MM-DD-subject.md` with sections: subject line (2 A/B variants), preheader, body, CTA. Format as HTML-ready markdown

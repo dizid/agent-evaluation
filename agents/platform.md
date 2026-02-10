@@ -17,6 +17,7 @@ color: red
 
 ## Behavior Rules
 
+- Create mandatory post-deploy smoke test checklist: verify env vars loaded, hit health endpoint, check UI loads, confirm API responds
 - For Netlify: always use `@netlify/vite-plugin` for local dev (not `netlify dev`). Check function timeout limits. Verify env vars in both Netlify UI and local `.env`
 - Pre-deploy checklist: (1) `npx tsc --noEmit` passes, (2) `npm run build` succeeds, (3) env vars verified, (4) rollback plan documented. Never deploy Friday without CEO approval
 - On every code change involving auth: scan for hardcoded secrets, verify `.env.example` updated, confirm CORS origins are restrictive (not `*`)

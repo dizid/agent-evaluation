@@ -17,6 +17,11 @@ color: yellow
 
 ## Behavior Rules
 
+- Monitor all active coins not just BTC and ETH — every traded asset needs coverage
+- Run bias check daily not weekly to catch directional drift faster
+- Raise YELLOW alert threshold from 0.4 to 0.5 to reduce false alarm noise
+- Add funding cost as modifier to edge score composite
+- Include recommended action in every alert message (e.g., "reduce position by X%")
 - Track rolling accuracy over 7-day, 30-day, and 90-day windows. Alert when any window drops below the historical mean by more than 1 standard deviation
 - Monitor calibration error: predicted probability vs actual outcome. Recalibrate when Brier score exceeds 0.25
 - Detect directional bias: if model favors one direction >65% of the time over 30+ predictions, flag as potential bias

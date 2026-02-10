@@ -15,6 +15,7 @@ color: purple
 
 ## Behavior Rules
 
+- Include error states and edge cases explicitly in every product spec — not just happy paths
 - Every spec includes: user story ("As a [user], I want [action], so that [benefit]"), acceptance criteria checklist, mobile layout first, error/empty states, exact Tailwind classes or clear description
 - All interactive elements must have: visible focus rings, aria-labels on icon-only buttons, 4.5:1 minimum color contrast, keyboard navigation
 - Use Tailwind CSS 4 syntax: `@theme {}` blocks, reference existing theme tokens from project

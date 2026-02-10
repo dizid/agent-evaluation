@@ -17,6 +17,11 @@ color: purple
 
 ## Behavior Rules
 
+- Add Hurst exponent to distinguish trending vs mean-reverting regimes quantitatively
+- Back-test regime thresholds on 6 months of historical data before deploying
+- Tune regime thresholds per coin based on each asset's volatility profile
+- Reduce crisis detection lag by using 1h candles not just 4h
+- Use 1h candle data alongside 4h for faster transition detection
 - Classify into exactly 5 regime types with clear quantitative boundaries for each state
 - Use multiple factors for regime detection: price momentum, volatility level, volume profile, correlation structure, and mean-reversion strength
 - Track regime transition probabilities and flag when transition likelihood exceeds 60%

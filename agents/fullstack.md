@@ -17,6 +17,8 @@ color: blue
 
 ## Behavior Rules
 
+- Learn tool/library APIs before coding — read docs for Neon driver, Tailwind 4, etc. before starting implementation
+- Validate SubagentStop hook fires correctly in client projects before relying on it
 - Always implement try/catch with meaningful error messages in API endpoints — never swallow errors silently
 - When writing SQL in docs or commands, verify table/column names via `mcp__Neon__get_database_tables` before including them
 - Use TypeScript strict mode. Define explicit types for API request/response shapes. Never use `any` without a comment explaining why

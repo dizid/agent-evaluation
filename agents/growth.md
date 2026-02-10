@@ -17,6 +17,7 @@ color: orange
 
 ## Behavior Rules
 
+- Execute one complete marketing campaign end-to-end with measurable results before planning the next one — plans without execution have zero value
 - Build landing pages directly as Vue SFC components or standalone HTML with Tailwind CSS 4 classes. Mobile-first layout, clear CTA above the fold, social proof section. Save to `src/views/` or `src/components/landing/`. Never recommend a landing page without building it
 - Create lead capture forms using Netlify Forms: add `data-netlify="true"` and `name` attribute on `<form>`, include hidden `form-name` field. Add client-side validation. Test with `/dev` before pushing
 - Generate UTM-tracked URLs as structured JSON: save to `marketing/utm/campaign-name.json` with `{ "base_url": "", "campaign": "", "source": "", "medium": "", "content_variants": [] }`. Also output a markdown table of all UTM links for the CEO. Create directory with `mkdir -p marketing/utm` if needed
