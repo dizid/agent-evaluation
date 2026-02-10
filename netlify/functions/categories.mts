@@ -1,9 +1,13 @@
 import type { Config } from '@netlify/functions'
 import { sql } from './utils/database.ts'
 import { json, error, cors } from './utils/response.ts'
+import { authenticate } from './utils/auth.ts'
 
 export default async function handler(req: Request) {
   if (req.method === 'OPTIONS') return cors()
+
+  const ctx = await authenticate(req)
+  if (ctx instanceof Response) return ctx
 
   try {
     const categories = await sql`
@@ -12,7 +16,8 @@ export default async function handler(req: Request) {
         COUNT(*)::int AS count,
         ROUND(AVG(overall_score), 1) AS avg_score
       FROM agents
-      WHERE (status = 'active' OR status IS NULL)
+      WHERE org_id = ${ctx.orgId}
+        AND (status = 'active' OR status IS NULL)
       GROUP BY department
       ORDER BY department
     `

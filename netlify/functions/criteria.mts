@@ -1,38 +1,47 @@
 import type { Config } from '@netlify/functions'
 import { sql } from './utils/database.ts'
 import { json, error, cors } from './utils/response.ts'
+import { authenticate } from './utils/auth.ts'
 
 export default async function handler(req: Request) {
   if (req.method === 'OPTIONS') return cors()
+
+  const ctx = await authenticate(req)
+  if (ctx instanceof Response) return ctx
 
   try {
     const url = new URL(req.url)
     const category = url.searchParams.get('category')
     const appliesTo = url.searchParams.get('applies_to')
 
+    // Criteria are global (org_id IS NULL) or org-specific
     let criteria
     if (category && appliesTo) {
       criteria = await sql`
         SELECT * FROM criteria
-        WHERE category = ${category}
+        WHERE (org_id IS NULL OR org_id = ${ctx.orgId})
+          AND category = ${category}
           AND (applies_to IS NULL OR ${appliesTo} = ANY(applies_to))
         ORDER BY sort_order
       `
     } else if (category) {
       criteria = await sql`
         SELECT * FROM criteria
-        WHERE category = ${category}
+        WHERE (org_id IS NULL OR org_id = ${ctx.orgId})
+          AND category = ${category}
         ORDER BY sort_order
       `
     } else if (appliesTo) {
       criteria = await sql`
         SELECT * FROM criteria
-        WHERE applies_to IS NULL OR ${appliesTo} = ANY(applies_to)
+        WHERE (org_id IS NULL OR org_id = ${ctx.orgId})
+          AND (applies_to IS NULL OR ${appliesTo} = ANY(applies_to))
         ORDER BY category, sort_order
       `
     } else {
       criteria = await sql`
         SELECT * FROM criteria
+        WHERE org_id IS NULL OR org_id = ${ctx.orgId}
         ORDER BY category, sort_order
       `
     }

@@ -1,5 +1,28 @@
 const API_BASE = '/api'
 
+// --- Auth token + org context ---
+let _getToken = null
+let _getOrgSlug = null
+
+// Called once from App.vue to wire up auth
+export function setAuthProvider(getToken, getOrgSlug) {
+  _getToken = getToken
+  _getOrgSlug = getOrgSlug
+}
+
+async function authHeaders() {
+  const headers = { 'Content-Type': 'application/json' }
+  if (_getToken) {
+    const token = await _getToken()
+    if (token) headers['Authorization'] = `Bearer ${token}`
+  }
+  if (_getOrgSlug) {
+    const slug = _getOrgSlug()
+    if (slug) headers['X-Org-Slug'] = slug
+  }
+  return headers
+}
+
 // --- Cache layer ---
 const cache = new Map()
 const DEFAULT_TTL = 5 * 60 * 1000 // 5 minutes
@@ -8,7 +31,9 @@ const DEFAULT_TTL = 5 * 60 * 1000 // 5 minutes
 const inflight = new Map()
 
 function getCacheKey(url) {
-  return url
+  // Include org slug in cache key so org-switching invalidates
+  const slug = _getOrgSlug ? _getOrgSlug() : ''
+  return `${slug}:${url}`
 }
 
 function getCached(key) {
@@ -34,15 +59,26 @@ export function invalidateCache(urlPattern) {
   }
 }
 
+// Clear all cache (used on org switch)
+export function clearAllCache() {
+  cache.clear()
+  inflight.clear()
+}
+
 // --- Core request helpers ---
 
 async function request(path, options = {}) {
   const url = `${API_BASE}${path}`
+  const headers = await authHeaders()
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    headers: { ...headers, ...options.headers },
     ...options
   })
   if (!res.ok) {
+    if (res.status === 401) {
+      // Token expired or invalid — let Clerk handle re-auth
+      window.dispatchEvent(new CustomEvent('auth:expired'))
+    }
     const error = await res.json().catch(() => ({ error: res.statusText }))
     throw new Error(error.error || `API error: ${res.status}`)
   }
@@ -161,3 +197,153 @@ export const updateAgentStatus = (id, status) => {
 }
 
 export const getActionItems = (id) => fetchWithCache(`/agents/${id}?include=action_items`)
+
+export const markActionItemApplied = (agentId, evalId) => {
+  return request(`/agents/${agentId}?action=apply_item&eval_id=${evalId}`, {
+    method: 'PUT'
+  }).then(result => {
+    invalidateCache(`/agents/${agentId}`)
+    return result
+  })
+}
+
+// --- Organizations ---
+
+export const getOrganizations = () => fetchWithCache('/organizations')
+
+export const getOrganization = (slug) => fetchWithCache(`/organizations/${slug}`)
+
+export const createOrganization = (data) => {
+  return request('/organizations', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }).then(result => {
+    invalidateCache('/organizations')
+    return result
+  })
+}
+
+export const updateOrganization = (slug, data) => {
+  return request(`/organizations/${slug}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }).then(result => {
+    invalidateCache('/organizations')
+    invalidateCache(`/organizations/${slug}`)
+    return result
+  })
+}
+
+// --- Organization Members ---
+
+export const getOrgMembers = (slug) => fetchWithCache(`/organizations/${slug}/members`)
+
+export const inviteMember = (slug, data) => {
+  return request(`/organizations/${slug}/members`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }).then(result => {
+    invalidateCache(`/organizations/${slug}/members`)
+    return result
+  })
+}
+
+export const removeMember = (slug, userId) => {
+  return request(`/organizations/${slug}/members/${userId}`, {
+    method: 'DELETE'
+  }).then(result => {
+    invalidateCache(`/organizations/${slug}/members`)
+    return result
+  })
+}
+
+export const updateMemberRole = (slug, userId, role) => {
+  return request(`/organizations/${slug}/members/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role })
+  }).then(result => {
+    invalidateCache(`/organizations/${slug}/members`)
+    return result
+  })
+}
+
+// --- Departments ---
+
+export const getDepartments = () => fetchWithCache('/departments')
+
+export const createDepartment = (data) => {
+  return request('/departments', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }).then(result => {
+    invalidateCache('/departments')
+    return result
+  })
+}
+
+export const updateDepartment = (id, data) => {
+  return request(`/departments/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }).then(result => {
+    invalidateCache('/departments')
+    return result
+  })
+}
+
+export const deleteDepartment = (id) => {
+  return request(`/departments/${id}`, {
+    method: 'DELETE'
+  }).then(result => {
+    invalidateCache('/departments')
+    return result
+  })
+}
+
+// --- Marketplace ---
+
+export const getMarketplaceTemplates = (params = {}) => {
+  const query = new URLSearchParams(params).toString()
+  return fetchWithCache(`/marketplace${query ? `?${query}` : ''}`)
+}
+
+export const getMarketplaceTemplate = (id) => fetchWithCache(`/marketplace/${id}`)
+
+export const installTemplate = (templateId, customization = {}) => {
+  return request(`/marketplace/${templateId}/install`, {
+    method: 'POST',
+    body: JSON.stringify(customization)
+  }).then(result => {
+    invalidateCache('/agents')
+    invalidateCache('/marketplace')
+    return result
+  })
+}
+
+export const submitTemplateReview = (templateId, data) => {
+  return request(`/marketplace/${templateId}/reviews`, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }).then(result => {
+    invalidateCache(`/marketplace/${templateId}`)
+    return result
+  })
+}
+
+// --- Dashboard ---
+
+export const getDashboardStats = () => fetchWithCache('/dashboard', {}, 2 * 60 * 1000) // 2 min TTL
+
+// --- User Profile ---
+
+export const getUserProfile = () => fetchWithCache('/users/me')
+
+export const updateUserProfile = (data) => {
+  return request('/users/me', {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }).then(result => {
+    invalidateCache('/users/me')
+    return result
+  })
+}

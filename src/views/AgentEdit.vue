@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
-import { getAgent, updateAgent, getActionItems } from '@/services/api'
+import { getAgent, updateAgent, getActionItems, markActionItemApplied } from '@/services/api'
 import { useToast } from '@/composables/useToast'
 import ScoreBadge from '@/components/ui/ScoreBadge.vue'
 import DeptBadge from '@/components/ui/DeptBadge.vue'
@@ -17,6 +17,8 @@ const loading = ref(true)
 const saving = ref(false)
 const loadError = ref(null)
 const copied = ref(null)
+const applyingId = ref(null)
+const confirmItem = ref(null)
 
 // Form state
 const form = reactive({
@@ -191,6 +193,33 @@ function copyActionItem(item) {
   copied.value = item.evaluation_id
   setTimeout(() => copied.value = null, 2000)
 }
+
+function startApply(item) {
+  confirmItem.value = item
+}
+
+function cancelApply() {
+  confirmItem.value = null
+}
+
+async function confirmApply() {
+  const item = confirmItem.value
+  if (!item) return
+
+  confirmItem.value = null
+  applyingId.value = item.evaluation_id
+
+  try {
+    await markActionItemApplied(route.params.id, item.evaluation_id)
+    item.applied = true
+    item.applied_at = new Date().toISOString()
+    toast.success('Action item marked as applied')
+  } catch (e) {
+    toast.error('Failed to mark as applied: ' + e.message)
+  } finally {
+    applyingId.value = null
+  }
+}
 </script>
 
 <template>
@@ -344,19 +373,54 @@ function copyActionItem(item) {
       <!-- Action Items / Write-back suggestions -->
       <div v-if="actionItems.length > 0" class="glass-card p-4 space-y-3">
         <h2 class="text-lg font-semibold text-text-primary">Improvement Suggestions</h2>
-        <p class="text-sm text-text-muted">Action items from evaluations. Copy to apply as persona edits.</p>
+        <p class="text-sm text-text-muted">
+          Action items from evaluations. Mark as applied after updating the agent's behavior rules
+          via <code class="text-accent font-mono text-xs">/apply-action-items</code>.
+        </p>
+
+        <!-- Confirmation dialog -->
+        <div v-if="confirmItem" class="bg-accent/10 border border-accent/30 rounded-lg p-3 space-y-2">
+          <p class="text-sm text-text-primary">Mark this action item as applied?</p>
+          <p class="text-xs text-text-secondary italic">"{{ confirmItem.action_item }}"</p>
+          <div class="flex gap-2">
+            <button
+              @click="confirmApply"
+              class="px-3 py-1.5 bg-accent hover:bg-accent-hover rounded text-white text-xs transition-colors"
+            >Confirm</button>
+            <button
+              @click="cancelApply"
+              class="px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded text-text-secondary text-xs transition-colors"
+            >Cancel</button>
+          </div>
+        </div>
 
         <div
           v-for="item in actionItems"
           :key="item.evaluation_id"
           class="bg-eval-surface rounded-lg p-3 space-y-1"
+          :class="{ 'opacity-50': item.applied }"
         >
           <div class="flex items-start justify-between gap-2">
-            <div class="text-sm text-text-primary">{{ item.action_item }}</div>
-            <button
-              @click="copyActionItem(item)"
-              class="shrink-0 px-2 py-1 text-xs bg-white/5 hover:bg-white/10 rounded text-text-secondary transition-colors"
-            >{{ copied === item.evaluation_id ? 'Copied!' : 'Copy' }}</button>
+            <div class="text-sm text-text-primary">
+              <span v-if="item.applied" class="text-emerald-400 text-xs font-medium mr-1.5">Applied</span>
+              {{ item.action_item }}
+            </div>
+            <div class="shrink-0 flex gap-1">
+              <button
+                v-if="!item.applied"
+                @click="startApply(item)"
+                :disabled="applyingId === item.evaluation_id"
+                class="px-2 py-1 text-xs bg-accent/20 hover:bg-accent/30 rounded text-accent transition-colors disabled:opacity-50"
+              >{{ applyingId === item.evaluation_id ? 'Applying...' : 'Apply' }}</button>
+              <button
+                v-if="!item.applied"
+                @click="copyActionItem(item)"
+                class="px-2 py-1 text-xs bg-white/5 hover:bg-white/10 rounded text-text-secondary transition-colors"
+              >{{ copied === item.evaluation_id ? 'Copied!' : 'Copy' }}</button>
+              <span v-if="item.applied" class="text-xs text-text-muted">
+                {{ new Date(item.applied_at).toLocaleDateString() }}
+              </span>
+            </div>
           </div>
           <div v-if="item.top_weakness" class="text-xs text-text-muted">Weakness: {{ item.top_weakness }}</div>
           <div class="text-xs text-text-muted">

@@ -15,7 +15,7 @@ function getCorsOrigin(origin?: string | null): string {
 function corsHeaders(origin?: string | null): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': getCorsOrigin(origin),
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Org-Slug',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
   }
 }

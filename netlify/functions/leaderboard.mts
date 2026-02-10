@@ -1,9 +1,13 @@
 import type { Config } from '@netlify/functions'
 import { sql } from './utils/database.ts'
 import { json, error, cors } from './utils/response.ts'
+import { authenticate } from './utils/auth.ts'
 
 export default async function handler(req: Request) {
   if (req.method === 'OPTIONS') return cors()
+
+  const ctx = await authenticate(req)
+  if (ctx instanceof Response) return ctx
 
   try {
     const url = new URL(req.url)
@@ -15,7 +19,8 @@ export default async function handler(req: Request) {
         SELECT id, name, department, role, overall_score, rating_label,
                eval_count, confidence, trend
         FROM agents
-        WHERE (status = 'active' OR status IS NULL)
+        WHERE org_id = ${ctx.orgId}
+          AND (status = 'active' OR status IS NULL)
           AND department = ${department}
         ORDER BY overall_score DESC NULLS LAST
       `
@@ -24,19 +29,20 @@ export default async function handler(req: Request) {
         SELECT id, name, department, role, overall_score, rating_label,
                eval_count, confidence, trend
         FROM agents
-        WHERE (status = 'active' OR status IS NULL)
+        WHERE org_id = ${ctx.orgId}
+          AND (status = 'active' OR status IS NULL)
         ORDER BY overall_score DESC NULLS LAST
       `
     }
 
-    // Department averages for summary cards
     const deptAvgs = await sql`
       SELECT department,
              ROUND(AVG(overall_score)::numeric, 1) as avg_score,
              COUNT(*) as agent_count,
              SUM(eval_count) as total_evals
       FROM agents
-      WHERE overall_score IS NOT NULL
+      WHERE org_id = ${ctx.orgId}
+        AND overall_score IS NOT NULL
         AND (status = 'active' OR status IS NULL)
       GROUP BY department
       ORDER BY avg_score DESC

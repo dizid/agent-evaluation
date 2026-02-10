@@ -77,37 +77,45 @@ Scoring system for the 11 Dizid virtual agents. Used by `/rate` (quick) and `/ev
 
 ### Marketing
 
-**@Growth**
+**@Growth** — Campaign Executor
 | KPI | What to Look For |
 |-----|-----------------|
-| Strategic Thinking | Recommendations tied to revenue/ROI, not vanity metrics |
-| Channel Knowledge | Correct platform-specific advice for each ad network |
-| Budget Awareness | Realistic for solo founder scale, not enterprise playbooks |
-| Measurability | Every recommendation has a trackable KPI attached |
+| Landing Page Execution | Builds deployable landing pages with forms and CTAs, not wireframes |
+| Tracking Implementation | Writes actual GA4 event code, UTM configs in files |
+| Form & Lead Capture | Creates working Netlify Forms with validation |
+| Campaign Execution | Produces campaign-ready artifacts: pages, tracking, JSON configs |
 
-**@Content**
+**@Content** — Content Publisher
 | KPI | What to Look For |
 |-----|-----------------|
-| Writing Quality | Clear, engaging, on-brand, error-free prose |
-| SEO Integration | Keywords, meta tags, internal links woven in naturally |
-| Conversion Focus | CTAs are clear, benefit-driven, action-oriented |
-| Adaptability | Matches tone to platform (blog vs email vs social vs ad) |
+| Content Output | Writes deploy-ready files (markdown, Vue, HTML), not just chat text |
+| Multi-Channel Delivery | Blog + social variants + email draft produced together |
+| Publish Readiness | Content has frontmatter, SEO meta, correct formatting |
+| Brand Compliance | Matches project voice/tone, uses correct design tokens |
 
-**@Brand**
+**@Brand** — Brand Enforcer
 | KPI | What to Look For |
 |-----|-----------------|
-| Consistency | Voice/tone matches brand guidelines across all outputs |
-| Strategic Depth | Positioning goes beyond surface-level taglines |
-| Competitive Awareness | Knows market context and clear differentiators |
-| Visual Direction | Design briefs are specific and actionable for implementation |
+| Token Management | Edits @theme blocks directly in tailwind.css |
+| Violation Detection & Fix | Finds AND fixes brand violations in code, not just reports |
+| Style Guide Output | Generates deployable style guide pages with live previews |
+| Competitive Research | Research-backed positioning with cited competitor URLs |
 
-**@SEO**
+**@SEO** — SEO Implementer
 | KPI | What to Look For |
 |-----|-----------------|
-| Technical SEO | Structured data, canonicals, sitemaps, Core Web Vitals optimization, crawl efficiency |
-| Keyword & Intent Research | High-value keywords matched to search intent, realistic difficulty for solo-founder scale |
-| Analytics Setup | GA4+GTM configuration, custom events, data streams, debug verification |
-| Conversion Tracking | Full funnel tracking with attribution, UTMs, goal configuration, dashboards |
+| Meta Tag Implementation | Writes meta/OG/canonical tags directly in Vue components |
+| Structured Data Deployment | Valid JSON-LD implemented and validated in pages |
+| Lighthouse Auditing | Runs CLI audits, reports scores, fixes issues in code |
+| Tracking Code Setup | Writes GA4 gtag calls, UTM configs, sitemaps in actual files |
+
+**@Sales** — Sales Closer
+| KPI | What to Look For |
+|-----|-----------------|
+| Proposal Quality | Complete scope, pricing tiers, timeline, next steps — as files, not chat |
+| Pricing Execution | Deployed pricing pages with competitor research and CTAs |
+| Follow-Up Design | Multi-touch sequences with timing, channels, and objection responses |
+| Conversion Focus | Every artifact designed to move prospect closer to signing |
 
 ### Operations
 

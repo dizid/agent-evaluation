@@ -9,7 +9,9 @@ A standalone app for evaluating, scoring, and managing AI agents. Tracks 17 agen
 - **Frontend**: Vue 3 + Tailwind CSS 4 + Vite
 - **Backend**: Netlify Functions v2 (`.mts` files with `config.path`)
 - **Database**: Neon PostgreSQL (project: `calm-cherry-13678492`)
-- **Deploy**: Netlify (`dizid-agenteval.netlify.app`)
+- **Auth**: Clerk (JWT + webhooks)
+- **Domain**: `hirefire.dev` (Porkbun registrar, DNS delegated to Netlify)
+- **Deploy**: Netlify (`dizid-agenteval.netlify.app` → `hirefire.dev`)
 
 ## Key Files
 
@@ -73,6 +75,13 @@ A standalone app for evaluating, scoring, and managing AI agents. Tracks 17 agen
 - **Bayesian smoothing**: `(v/(v+m))*R + (m/(v+m))*6.0` where m=5
 - **Agent lifecycle**: active → archived/fired (soft-delete, hidden from Browse/Leaderboard)
 
+## Infrastructure Notes
+
+- **DNS**: Managed via Netlify DNS (NOT Porkbun — NS delegated). Use `netlify api` for DNS changes
+- **Env vars**: Set in Netlify UI or `netlify env:set`. Clerk keys: `VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SECRET`
+- **Netlify site ID**: `aaf526b6-de59-4e14-b736-3f6f9e8a9ccf`
+- **Netlify DNS zone ID**: `698afb04daa6d6efb5ee1aeb`
+
 ## Netlify Functions Gotchas
 
 - New function files may NOT be discovered by git deploys — use `netlify deploy --prod`
@@ -99,7 +108,7 @@ All 11 Dizid agents are defined globally in `~/.claude/CLAUDE.md` and available 
 1. **Use agents naturally** — say "as @SEO, audit this page" or "route to @Growth"
 2. **After significant work**, run `/rate @AgentName` to evaluate performance
 3. **Fill in the project name** when evaluating — this tracks per-project performance
-4. **View trends** at https://dizid-agenteval.netlify.app
+4. **View trends** at https://hirefire.dev
 
 ### Where Things Live
 | What | Where | Purpose |
@@ -108,7 +117,7 @@ All 11 Dizid agents are defined globally in `~/.claude/CLAUDE.md` and available 
 | Individual agent files | `agents/*.md` | Source of truth for AgentEval |
 | Combined team reference | `agents/CLAUDE-TEAM.md` | Detailed version with toolbox |
 | Evaluation data | Neon PostgreSQL | Scores, trends, action items |
-| Dashboard | dizid-agenteval.netlify.app | Visual leaderboard and history |
+| Dashboard | hirefire.dev | Visual leaderboard and history |
 
 ### Improving Agents
 1. Rate agents via `/rate` or the web UI at `/evaluate`

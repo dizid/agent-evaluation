@@ -1,8 +1,8 @@
 import type { Config } from '@netlify/functions'
 import { sql } from './utils/database.ts'
 import { json, error, cors } from './utils/response.ts'
+import { authenticate, authorize } from './utils/auth.ts'
 
-// Strip HTML tags from a string to prevent XSS
 function stripHtml(str: string): string {
   return str.replace(/<[^>]*>/g, '')
 }
@@ -10,38 +10,35 @@ function stripHtml(str: string): string {
 export default async function handler(req: Request) {
   if (req.method === 'OPTIONS') return cors()
 
+  const ctx = await authenticate(req)
+  if (ctx instanceof Response) return ctx
+
   try {
     const url = new URL(req.url)
     const segments = url.pathname.split('/').filter(Boolean)
-    // segments: ['api', 'agents', ':id'] or ['api', 'agents', ':id', 'action-items']
     const agentIndex = segments.indexOf('agents')
     const id = agentIndex >= 0 ? segments[agentIndex + 1] : null
 
     if (!id) return error('Agent ID is required', 400)
+    if (!/^[a-z0-9-]{2,50}$/.test(id)) return error('Invalid agent ID format', 400)
 
-    // Validate agent ID format
-    if (!/^[a-z0-9-]{2,50}$/.test(id)) {
-      return error('Invalid agent ID format', 400)
-    }
-
-    // Route: GET /api/agents/:id?include=action_items
     if (req.method === 'GET' && url.searchParams.get('include') === 'action_items') {
-      return handleActionItems(id)
+      return handleActionItems(id, ctx.orgId)
     }
-
-    // Route: PUT /api/agents/:id — update agent fields
+    if (req.method === 'PUT' && url.searchParams.get('action') === 'apply_item') {
+      if (!authorize(ctx, 'admin')) return error('Forbidden', 403)
+      return handleApplyItem(id, url, ctx.orgId)
+    }
     if (req.method === 'PUT') {
-      return handleUpdate(id, req)
+      if (!authorize(ctx, 'admin')) return error('Forbidden', 403)
+      return handleUpdate(id, req, ctx.orgId)
     }
-
-    // Route: PATCH /api/agents/:id — update agent status
     if (req.method === 'PATCH') {
-      return handleStatus(id, req)
+      if (!authorize(ctx, 'admin')) return error('Forbidden', 403)
+      return handleStatus(id, req, ctx.orgId)
     }
-
-    // Route: GET /api/agents/:id — detail view
     if (req.method === 'GET') {
-      return handleDetail(id)
+      return handleDetail(id, ctx.orgId)
     }
 
     return error('Method not allowed', 405)
@@ -51,16 +48,14 @@ export default async function handler(req: Request) {
   }
 }
 
-// GET /api/agents/:id — agent detail + latest evaluation
-async function handleDetail(id: string) {
-  const agents = await sql`SELECT * FROM agents WHERE id = ${id}`
+async function handleDetail(id: string, orgId: string) {
+  const agents = await sql`SELECT * FROM agents WHERE id = ${id} AND org_id = ${orgId}`
   if (agents.length === 0) return error('Agent not found', 404)
 
   const evaluations = await sql`
     SELECT * FROM evaluations
-    WHERE agent_id = ${id}
-    ORDER BY created_at DESC
-    LIMIT 1
+    WHERE agent_id = ${id} AND org_id = ${orgId}
+    ORDER BY created_at DESC LIMIT 1
   `
 
   return json(
@@ -70,43 +65,26 @@ async function handleDetail(id: string) {
   )
 }
 
-// PUT /api/agents/:id — update agent fields
-async function handleUpdate(id: string, req: Request) {
-  const existing = await sql`SELECT * FROM agents WHERE id = ${id}`
+async function handleUpdate(id: string, req: Request, orgId: string) {
+  const existing = await sql`SELECT * FROM agents WHERE id = ${id} AND org_id = ${orgId}`
   if (existing.length === 0) return error('Agent not found', 404)
 
   const body = await req.json()
   const agent = existing[0]
 
-  // Validate field lengths
-  if (body.name !== undefined) {
-    if (typeof body.name !== 'string' || body.name.length > 100) {
-      return error('name must be a string of max 100 characters', 400)
-    }
+  if (body.name !== undefined && (typeof body.name !== 'string' || body.name.length > 100)) {
+    return error('name must be a string of max 100 characters', 400)
   }
-  if (body.role !== undefined) {
-    if (typeof body.role !== 'string' || body.role.length > 200) {
-      return error('role must be a string of max 200 characters', 400)
-    }
+  if (body.role !== undefined && (typeof body.role !== 'string' || body.role.length > 200)) {
+    return error('role must be a string of max 200 characters', 400)
   }
-  if (body.persona !== undefined) {
-    if (typeof body.persona !== 'string' || body.persona.length > 5000) {
-      return error('persona must be a string of max 5000 characters', 400)
-    }
+  if (body.persona !== undefined && (typeof body.persona !== 'string' || body.persona.length > 5000)) {
+    return error('persona must be a string of max 5000 characters', 400)
   }
-
-  // Validate department if provided
-  const validDepartments = ['development', 'marketing', 'operations', 'tools', 'trading']
-  if (body.department && !validDepartments.includes(body.department)) {
-    return error(`department must be one of: ${validDepartments.join(', ')}`, 400)
-  }
-
-  // Validate kpi_definitions if provided
   if (body.kpi_definitions && (!Array.isArray(body.kpi_definitions) || !body.kpi_definitions.every((k: any) => typeof k === 'string'))) {
     return error('kpi_definitions must be an array of strings', 400)
   }
 
-  // Strip HTML from text inputs
   const name = stripHtml(body.name ?? agent.name)
   const department = body.department ?? agent.department
   const role = stripHtml(body.role ?? agent.role)
@@ -119,23 +97,18 @@ async function handleUpdate(id: string, req: Request) {
 
   const result = await sql`
     UPDATE agents SET
-      name = ${name},
-      department = ${department},
-      role = ${role},
-      persona = ${persona},
-      kpi_definitions = ${kpi_definitions},
-      source_path = ${source_path},
-      model = ${model}
-    WHERE id = ${id}
+      name = ${name}, department = ${department}, role = ${role},
+      persona = ${persona}, kpi_definitions = ${kpi_definitions},
+      source_path = ${source_path}, model = ${model}, updated_at = NOW()
+    WHERE id = ${id} AND org_id = ${orgId}
     RETURNING *
   `
 
   return json({ agent: result[0] })
 }
 
-// PATCH /api/agents/:id — update agent status (fire/archive/reactivate)
-async function handleStatus(id: string, req: Request) {
-  const existing = await sql`SELECT id FROM agents WHERE id = ${id}`
+async function handleStatus(id: string, req: Request, orgId: string) {
+  const existing = await sql`SELECT id FROM agents WHERE id = ${id} AND org_id = ${orgId}`
   if (existing.length === 0) return error('Agent not found', 404)
 
   const body = await req.json()
@@ -146,35 +119,48 @@ async function handleStatus(id: string, req: Request) {
   }
 
   const result = await sql`
-    UPDATE agents SET
-      status = ${status},
-      status_changed_at = NOW()
-    WHERE id = ${id}
+    UPDATE agents SET status = ${status}, status_changed_at = NOW()
+    WHERE id = ${id} AND org_id = ${orgId}
     RETURNING *
   `
 
-  const labels: Record<string, string> = {
-    active: 'Agent reactivated',
-    archived: 'Agent archived',
-    fired: 'Agent fired'
-  }
-
+  const labels: Record<string, string> = { active: 'Agent reactivated', archived: 'Agent archived', fired: 'Agent fired' }
   return json({ agent: result[0], message: labels[status] })
 }
 
-// GET /api/agents/:id/action-items — improvement suggestions from evaluations
-async function handleActionItems(id: string) {
-  const existing = await sql`SELECT id FROM agents WHERE id = ${id}`
+async function handleActionItems(id: string, orgId: string) {
+  const existing = await sql`SELECT id FROM agents WHERE id = ${id} AND org_id = ${orgId}`
   if (existing.length === 0) return error('Agent not found', 404)
 
   const items = await sql`
-    SELECT id AS evaluation_id, action_item, overall, top_weakness, created_at
+    SELECT id AS evaluation_id, action_item, overall, top_weakness, created_at,
+           COALESCE(applied, false) AS applied, applied_at
     FROM evaluations
-    WHERE agent_id = ${id} AND action_item IS NOT NULL
-    ORDER BY created_at DESC
+    WHERE agent_id = ${id} AND org_id = ${orgId} AND action_item IS NOT NULL
+    ORDER BY applied ASC, created_at DESC
   `
-
   return json({ action_items: items })
+}
+
+async function handleApplyItem(agentId: string, url: URL, orgId: string) {
+  const evalIdParam = url.searchParams.get('eval_id')
+  if (!evalIdParam || isNaN(Number(evalIdParam))) {
+    return error('eval_id query parameter is required and must be a number', 400)
+  }
+  const evalId = Number(evalIdParam)
+
+  const evals = await sql`
+    SELECT id, action_item, applied FROM evaluations
+    WHERE id = ${evalId} AND agent_id = ${agentId} AND org_id = ${orgId} AND action_item IS NOT NULL
+  `
+  if (evals.length === 0) return error('Evaluation not found or has no action item', 404)
+  if (evals[0].applied === true) return json({ message: 'Already applied', evaluation_id: evalId })
+
+  const result = await sql`
+    UPDATE evaluations SET applied = true, applied_at = NOW()
+    WHERE id = ${evalId} RETURNING id, action_item, applied, applied_at
+  `
+  return json({ message: 'Action item marked as applied', evaluation: result[0] })
 }
 
 export const config: Config = {
