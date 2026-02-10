@@ -1,67 +1,138 @@
-# Agent Evaluation & Improvement App
+# AgentEval — AI Agent Evaluation & Marketplace
 
 ## What is this?
 
-A standalone app for evaluating, scoring, and managing AI agents. Tracks 17 agents across 5 departments — 11 Dizid personas (from `agents/CLAUDE-TEAM.md`) and 6 Claude Code custom agents (from `~/.claude/agents/`). The goal: systematically evaluate, improve, and manage every agent through one system.
+Multi-tenant SaaS for evaluating, scoring, and managing AI agents. Organizations create workspaces, install agent templates from a public marketplace, and track performance with structured evaluations. Dizid runs 18 agents across 5 departments — 12 Dizid personas and 6 Claude Code custom agents.
 
 ## Tech Stack
 
-- **Frontend**: Vue 3 + Tailwind CSS 4 + Vite
+- **Frontend**: Vue 3 + Tailwind CSS 4 + Vite + Chart.js
 - **Backend**: Netlify Functions v2 (`.mts` files with `config.path`)
 - **Database**: Neon PostgreSQL (project: `calm-cherry-13678492`)
-- **Auth**: Clerk (JWT + webhooks)
+- **Auth**: Clerk (JWT + webhooks) + Svix (webhook verification)
 - **Domain**: `hirefire.dev` (Porkbun registrar, DNS delegated to Netlify)
 - **Deploy**: Netlify (`dizid-agenteval.netlify.app` → `hirefire.dev`)
+
+## Project Defaults
+
+```bash
+npm run dev          # Vite on port 3000 (uses @netlify/vite-plugin, NOT netlify dev)
+npm run build        # Production build
+npm test             # Vitest with coverage
+```
+
+**Required env vars** (`.env` locally, Netlify UI for prod):
+- `DATABASE_URL` — Neon connection string
+- `VITE_CLERK_PUBLISHABLE_KEY` — Clerk frontend key (pk_test_... or pk_live_...)
+- `CLERK_SECRET_KEY` — Clerk backend key
+- `CLERK_WEBHOOK_SECRET` — Svix signing secret for `/api/webhooks/clerk`
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `framework/FRAMEWORK.md` | Evaluation criteria, KPIs, scoring formula, rating scale |
-| `agents/CLAUDE-TEAM.md` | Dizid agent definitions |
-| `migrations/*.sql` | Database schema and seed data |
+| `framework/FRAMEWORK.md` | Evaluation criteria, KPIs, scoring formula |
+| `agents/CLAUDE-TEAM.md` | Dizid agent definitions with toolboxes |
+| `agents/*.md` | Individual agent persona files |
+| `migrations/*.sql` | Database schema and seed data (001-011) |
 | `netlify/functions/*.mts` | API endpoints |
-| `src/views/*.vue` | Page components |
+| `netlify/functions/utils/auth.ts` | Clerk JWT verification, org context, RBAC |
+| `netlify/functions/utils/database.ts` | Neon connection helper |
+| `netlify/functions/utils/scoring.ts` | Score calculations |
+| `netlify/functions/utils/response.ts` | CORS headers, error responses |
+| `src/composables/useAuthContext.js` | Frontend auth state (wraps @clerk/vue) |
+| `src/composables/useOrgContext.js` | Org switching, RBAC permission checks |
 | `src/services/api.js` | Frontend API client |
-| `src/services/scoring.js` | Score calculations and formatting |
+| `src/services/scoring.js` | Score formatting utilities |
 
 ## Architecture
 
-### Database (3 tables)
-- `agents` — id (TEXT PK), name, department, role, persona, kpi_definitions (JSONB), overall_score, status, source_type, source_path, model
-- `evaluations` — id (SERIAL PK), agent_id (FK), scores (JSONB), overall, weight, action_item, etc.
-- `criteria` — id (TEXT PK), name, category, agent_id (FK)
+### Multitenancy Model
+
+- **Auth**: Clerk JWT in `Authorization: Bearer` header → verified by `authenticate()` in auth.ts
+- **Org scoping**: All queries filter by `org_id`. Resolved from `X-Org-Slug` header or user's first org
+- **RBAC roles**: `viewer` < `evaluator` < `admin` < `owner` — checked via `authorize(ctx, 'admin')`
+- **Public endpoints**: Marketplace browse uses `optionalAuth()` (no auth required)
+- **Seed data**: Dizid org auto-created in migration 011 with all existing agents/evaluations migrated
+
+### Database (10 tables)
+
+**Core:**
+- `agents` — id (TEXT PK), org_id (FK), name, department, department_id (FK), role, persona, kpi_definitions (JSONB), overall_score, status, source_type, template_id
+- `evaluations` — id (SERIAL PK), agent_id (FK), org_id (FK), evaluator_user_id (FK), scores (JSONB), overall, weight, action_item, applied, applied_at
+- `criteria` — id (TEXT PK), name, category, org_id (FK, NULL = global)
+
+**Auth & tenancy:**
+- `users` — id (UUID PK), clerk_user_id (UNIQUE), email, full_name, avatar_url, onboarding_completed
+- `organizations` — id (UUID PK), name, slug (UNIQUE), owner_id (FK), plan_tier ('free'|'pro'|'enterprise'), agent_limit, member_limit
+- `org_members` — (org_id, user_id) PK, role ('owner'|'admin'|'evaluator'|'viewer'), invited_by, joined_at
+- `departments` — id (UUID PK), org_id (FK), name, slug, color, sort_order
+
+**Marketplace:**
+- `agent_templates` — id (TEXT PK), category, role, persona, kpi_definitions (JSONB), author_org_id, is_official, is_public, install_count, avg_rating
+- `template_ratings` — (template_id, user_id) PK, rating (1-5), review_text
+- `agent_installs` — id (SERIAL PK), template_id, org_id, agent_id, installed_by
 
 ### API Endpoints
-| Method | Path | Handler | Purpose |
-|--------|------|---------|---------|
-| GET | `/api/agents` | agents-list.mts | List agents (default: active only, `?status=all` for all) |
-| POST | `/api/agents` | agents-list.mts | Create new agent |
-| GET | `/api/agents/:id` | agents-detail.mts | Agent detail + latest evaluation |
-| PUT | `/api/agents/:id` | agents-detail.mts | Update agent fields |
-| PATCH | `/api/agents/:id` | agents-detail.mts | Update agent status (fire/archive/reactivate) |
-| GET | `/api/agents/:id?include=action_items` | agents-detail.mts | Action items from evaluations |
-| GET | `/api/agents/:id/evaluations` | evaluations-list.mts | All evaluations for agent |
-| POST | `/api/evaluations` | evaluations-create.mts | Submit evaluation |
-| GET | `/api/leaderboard` | leaderboard.mts | Rankings + dept averages |
-| GET | `/api/criteria` | criteria.mts | Evaluation criteria |
-| GET | `/api/categories` | categories.mts | Department stats |
+
+| Method | Path | Handler | Auth | Purpose |
+|--------|------|---------|------|---------|
+| GET | `/api/agents` | agents-list.mts | yes | List org agents |
+| POST | `/api/agents` | agents-list.mts | yes | Create agent |
+| GET | `/api/agents/:id` | agents-detail.mts | yes | Agent detail + latest eval |
+| PUT | `/api/agents/:id` | agents-detail.mts | yes | Update agent fields |
+| PATCH | `/api/agents/:id` | agents-detail.mts | yes | Update status (fire/archive) |
+| GET | `/api/agents/:id?include=action_items` | agents-detail.mts | yes | Action items |
+| GET | `/api/agents/:id/evaluations` | evaluations-list.mts | yes | Evaluation history |
+| POST | `/api/evaluations` | evaluations-create.mts | yes | Submit evaluation |
+| GET | `/api/leaderboard` | leaderboard.mts | yes | Rankings + dept averages |
+| GET | `/api/criteria` | criteria.mts | yes | Evaluation criteria |
+| GET | `/api/categories` | categories.mts | yes | Department stats |
+| GET | `/api/organizations` | orgs.mts | yes | User's orgs |
+| POST | `/api/organizations` | orgs.mts | yes | Create org |
+| GET/POST/PUT/DELETE | `/api/departments` | departments.mts | yes | Department CRUD |
+| GET/PUT | `/api/users/me` | users-me.mts | yes | User profile |
+| GET | `/api/dashboard` | dashboard.mts | yes | Org overview stats |
+| GET | `/api/marketplace` | marketplace-list.mts | no | Browse templates |
+| GET | `/api/marketplace/:id` | marketplace-detail.mts | no | Template detail |
+| POST | `/api/marketplace/:id/install` | marketplace-detail.mts | yes | Install template |
+| POST | `/api/marketplace/:id/reviews` | marketplace-detail.mts | yes | Submit review |
+| POST | `/api/webhooks/clerk` | webhook-clerk.mts | svix | User sync |
+| GET | `/api/health` | health.mts | no | Health check |
 
 ### Frontend Routes
+
+**Public:**
 | Path | View | Purpose |
 |------|------|---------|
 | `/` | Landing | Homepage |
-| `/browse` | Browse | Agent directory with dept/score filters |
-| `/agent/:id` | AgentDetail | Agent profile + evaluation history |
-| `/agent/:id/edit` | AgentEdit | Edit agent + improvement suggestions |
+| `/pricing` | Pricing | Plan comparison (Free/Pro/Enterprise) |
+| `/sign-in` | SignIn | Clerk sign-in |
+| `/sign-up` | SignUp | Clerk sign-up |
+| `/marketplace` | MarketplaceBrowse | Browse agent templates |
+| `/marketplace/:id` | MarketplaceDetail | Template detail + reviews |
+
+**Authenticated:**
+| Path | View | Purpose |
+|------|------|---------|
+| `/onboarding` | Onboarding | New user org creation |
+| `/dashboard` | Dashboard | Org overview + stats |
+| `/browse` | Browse | Agent directory (org-scoped) |
+| `/agent/:id` | AgentDetail | Agent profile + eval history |
+| `/agent/:id/edit` | AgentEdit | Edit agent + action items |
 | `/evaluate` | Evaluate | Submit evaluations |
 | `/leaderboard` | Leaderboard | Rankings by dept |
-| `/manage` | AgentManage | Admin hub: fire/archive/reactivate agents |
+| `/manage` | AgentManage | Fire/archive/reactivate agents |
+| `/marketplace/:id/install` | MarketplaceInstall | Install template into org |
+| `/settings` | OrgSettings | Org settings |
+| `/settings/team` | TeamManage | Invite/manage members |
+| `/settings/departments` | DepartmentManage | Create/edit departments |
+| `/profile` | UserProfile | User profile |
 
-## Current Roster (17 agents, 5 departments)
+## Current Roster (18 agents, 5 departments)
 
 - **Development** (5): @FullStack, @Product, @Platform, @Data, @AI
-- **Marketing** (4): @Content, @Growth, @Brand, @SEO
+- **Marketing** (5): @Content, @Growth, @Brand, @SEO, @Sales
 - **Operations** (2): @Ops, @Email
 - **Tools** (2): @CodeImprover, @SecurityReviewer — source: `claude-agent`
 - **Trading** (4): @BacktestQuant, @RiskQuant, @RegimeDetector, @EdgeMonitor — source: `claude-agent`
@@ -74,13 +145,15 @@ A standalone app for evaluating, scoring, and managing AI agents. Tracks 17 agen
 - **Anti-gaming**: self-eval 0.8 weight, auto-eval 0.7, low-effort 0.5
 - **Bayesian smoothing**: `(v/(v+m))*R + (m/(v+m))*6.0` where m=5
 - **Agent lifecycle**: active → archived/fired (soft-delete, hidden from Browse/Leaderboard)
+- **Plan tiers**: Free (5 agents, 3 members), Pro (20/10), Enterprise (unlimited)
 
 ## Infrastructure Notes
 
 - **DNS**: Managed via Netlify DNS (NOT Porkbun — NS delegated). Use `netlify api` for DNS changes
-- **Env vars**: Set in Netlify UI or `netlify env:set`. Clerk keys: `VITE_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SECRET`
+- **Env vars**: Set in Netlify UI or `netlify env:set`
 - **Netlify site ID**: `aaf526b6-de59-4e14-b736-3f6f9e8a9ccf`
 - **Netlify DNS zone ID**: `698afb04daa6d6efb5ee1aeb`
+- **CORS**: Whitelisted origins in `response.ts` (production + localhost:5173 + localhost:8888)
 
 ## Netlify Functions Gotchas
 
@@ -102,7 +175,7 @@ A standalone app for evaluating, scoring, and managing AI agents. Tracks 17 agen
 
 ## Using Agents Across Projects
 
-All 11 Dizid agents are defined globally in `~/.claude/CLAUDE.md` and available in every project.
+All 12 Dizid agents are defined globally in `~/.claude/CLAUDE.md` and available in every project.
 
 ### Workflow
 1. **Use agents naturally** — say "as @SEO, audit this page" or "route to @Growth"
@@ -132,3 +205,4 @@ All 11 Dizid agents are defined globally in `~/.claude/CLAUDE.md` and available 
 - One action item per evaluation scorecard (focus beats breadth)
 - Action items must target domain skills, not meta-workflow behavior
 - Action items must be specific, testable, and implementable as persona edits
+- All API endpoints must scope queries to `org_id` (no cross-tenant data leaks)

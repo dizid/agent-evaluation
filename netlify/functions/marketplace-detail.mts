@@ -14,7 +14,6 @@ export default async function handler(req: Request) {
   try {
     const url = new URL(req.url)
     const segments = url.pathname.split('/').filter(Boolean)
-    // segments: ['api', 'marketplace', ':id'] or ['api', 'marketplace', ':id', 'install']
     const marketplaceIndex = segments.indexOf('marketplace')
     const id = marketplaceIndex >= 0 && segments.length > marketplaceIndex + 1 ? segments[marketplaceIndex + 1] : null
 
@@ -25,19 +24,17 @@ export default async function handler(req: Request) {
       return error('Invalid template ID format', 400)
     }
 
-    // Check for sub-routes
-    const hasInstall = segments.includes('install')
-    const hasReviews = segments.includes('reviews')
+    const action = url.searchParams.get('action')
 
-    // Route: POST /api/marketplace/:id/install — install template
-    if (req.method === 'POST' && hasInstall) {
+    // Route: POST /api/marketplace/:id?action=install — install template
+    if (req.method === 'POST' && action === 'install') {
       const ctx = await authenticate(req)
       if (ctx instanceof Response) return ctx
       return handleInstall(ctx, id, req)
     }
 
-    // Route: POST /api/marketplace/:id/reviews — submit/update review
-    if (req.method === 'POST' && hasReviews) {
+    // Route: POST /api/marketplace/:id?action=review — submit/update review
+    if (req.method === 'POST' && action === 'review') {
       const ctx = await authenticate(req)
       if (ctx instanceof Response) return ctx
       return handleReview(ctx, id, req)
@@ -85,7 +82,7 @@ async function handleDetail(id: string) {
   )
 }
 
-// POST /api/marketplace/:id/install — install template into user's org
+// POST /api/marketplace/:id?action=install — install template into user's org
 async function handleInstall(ctx: { userId: string; orgId: string }, templateId: string, req: Request) {
   // Verify template exists and is public
   const templates = await sql`
@@ -102,7 +99,6 @@ async function handleInstall(ctx: { userId: string; orgId: string }, templateId:
   // Extract customization options (all optional)
   const agentId = body.agent_id ? stripHtml(body.agent_id.trim()) : template.id
   const name = body.name ? stripHtml(body.name.trim()) : template.name
-  const departmentSlug = body.department_slug ? stripHtml(body.department_slug.trim()) : null
   const persona = body.persona ? stripHtml(body.persona.trim()) : template.persona
 
   // Validate agent_id format
@@ -119,39 +115,54 @@ async function handleInstall(ctx: { userId: string; orgId: string }, templateId:
     return error('An agent with this ID already exists in your organization', 409)
   }
 
-  // Map department_slug to department_id
+  // Resolve department: accept department_id (UUID) or department_slug (string)
   let departmentId = null
-  if (departmentSlug) {
+  let departmentSlug = null
+
+  if (body.department_id) {
+    // Look up by UUID
     const depts = await sql`
-      SELECT id FROM departments
-      WHERE org_id = ${ctx.orgId} AND slug = ${departmentSlug}
+      SELECT id, slug FROM departments
+      WHERE org_id = ${ctx.orgId} AND id = ${body.department_id}
     `
     if (depts.length > 0) {
       departmentId = depts[0].id
+      departmentSlug = depts[0].slug
+    }
+  } else if (body.department_slug) {
+    // Look up by slug
+    const depts = await sql`
+      SELECT id, slug FROM departments
+      WHERE org_id = ${ctx.orgId} AND slug = ${stripHtml(body.department_slug.trim())}
+    `
+    if (depts.length > 0) {
+      departmentId = depts[0].id
+      departmentSlug = depts[0].slug
     }
   }
 
-  // If no department found via slug, use first department
+  // Fallback to first department
   if (!departmentId) {
     const firstDept = await sql`
-      SELECT id FROM departments
+      SELECT id, slug FROM departments
       WHERE org_id = ${ctx.orgId}
       ORDER BY sort_order ASC, name ASC
       LIMIT 1
     `
     if (firstDept.length > 0) {
       departmentId = firstDept[0].id
+      departmentSlug = firstDept[0].slug
     }
   }
 
-  // Insert agent
+  // Insert agent — set both department (string) and department_id (UUID FK)
   const agentResult = await sql`
     INSERT INTO agents (
-      id, org_id, name, department_id, role, persona,
+      id, org_id, name, department, department_id, role, persona,
       kpi_definitions, source_type, template_id, status
     )
     VALUES (
-      ${agentId}, ${ctx.orgId}, ${name}, ${departmentId}, ${template.role},
+      ${agentId}, ${ctx.orgId}, ${name}, ${departmentSlug}, ${departmentId}, ${template.role},
       ${persona}, ${JSON.stringify(template.kpi_definitions)},
       'template', ${templateId}, 'active'
     )
@@ -166,8 +177,8 @@ async function handleInstall(ctx: { userId: string; orgId: string }, templateId:
 
   // Record install
   await sql`
-    INSERT INTO agent_installs (template_id, org_id, installed_by)
-    VALUES (${templateId}, ${ctx.orgId}, ${ctx.userId})
+    INSERT INTO agent_installs (template_id, org_id, agent_id, installed_by)
+    VALUES (${templateId}, ${ctx.orgId}, ${agentId}, ${ctx.userId})
   `
 
   // Increment install count
@@ -183,7 +194,7 @@ async function handleInstall(ctx: { userId: string; orgId: string }, templateId:
   )
 }
 
-// POST /api/marketplace/:id/reviews — submit/update review
+// POST /api/marketplace/:id?action=review — submit/update review
 async function handleReview(ctx: { userId: string }, templateId: string, req: Request) {
   const body = await req.json()
   const { rating, review_text } = body

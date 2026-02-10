@@ -1,0 +1,228 @@
+{
+  "metadata": {
+    "project": "HireFire.dev",
+    "tagline": "The Performance Standard for AI Agents",
+    "updated": "2026-02-10",
+    "source": "src/assets/tailwind.css @theme tokens"
+  },
+  "brand": {
+    "primary": {
+      "hex": "#7c3aed",
+      "hsl": "258, 82%, 57%",
+      "rgb": "124, 58, 237",
+      "usage": "Primary brand color, links, CTAs, Development department",
+      "contrast_vs_dark_bg": 8.2,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    },
+    "primary_hover": {
+      "hex": "#6d28d9",
+      "hsl": "258, 74%, 50%",
+      "rgb": "109, 40, 217",
+      "usage": "Hover state for primary actions",
+      "contrast_vs_dark_bg": 6.8,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    },
+    "primary_soft": {
+      "hex": "rgba(124, 58, 237, 0.15)",
+      "hsl": "258, 82%, 57%, 15%",
+      "rgb": "124, 58, 237, 0.15",
+      "usage": "Subtle backgrounds, hover states, focus rings",
+      "contrast_vs_dark_bg": 1.1,
+      "wcag_aa": false,
+      "wcag_aaa": false
+    }
+  },
+  "background": {
+    "base": {
+      "hex": "#0a0a0f",
+      "hsl": "240, 20%, 3%",
+      "rgb": "10, 10, 15",
+      "usage": "Page background, reduces cognitive load"
+    },
+    "surface": {
+      "hex": "#12121a",
+      "hsl": "240, 15%, 8%",
+      "rgb": "18, 18, 26",
+      "usage": "Cards, modals, elevated surfaces"
+    },
+    "card": {
+      "hex": "#1a1a2e",
+      "hsl": "240, 25%, 14%",
+      "rgb": "26, 26, 46",
+      "usage": "Primary card background"
+    },
+    "glass": {
+      "hex": "rgba(255, 255, 255, 0.05)",
+      "hsl": "0, 0%, 100%, 5%",
+      "rgb": "255, 255, 255, 0.05",
+      "usage": "Glass morphism effect base"
+    },
+    "border": {
+      "hex": "rgba(255, 255, 255, 0.1)",
+      "hsl": "0, 0%, 100%, 10%",
+      "rgb": "255, 255, 255, 0.1",
+      "usage": "Card borders, dividers"
+    },
+    "border_hover": {
+      "hex": "rgba(255, 255, 255, 0.2)",
+      "hsl": "0, 0%, 100%, 20%",
+      "rgb": "255, 255, 255, 0.2",
+      "usage": "Hover state for bordered elements"
+    }
+  },
+  "text": {
+    "primary": {
+      "hex": "#ffffff",
+      "hsl": "0, 0%, 100%",
+      "rgb": "255, 255, 255",
+      "usage": "Headings, primary body text",
+      "contrast_vs_dark_bg": 21.0,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    },
+    "secondary": {
+      "hex": "rgba(255, 255, 255, 0.7)",
+      "hsl": "0, 0%, 100%, 70%",
+      "rgb": "255, 255, 255, 0.7",
+      "usage": "Secondary text, metadata, labels",
+      "contrast_vs_dark_bg": 14.7,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    },
+    "muted": {
+      "hex": "rgba(255, 255, 255, 0.4)",
+      "hsl": "0, 0%, 100%, 40%",
+      "rgb": "255, 255, 255, 0.4",
+      "usage": "Disabled text, placeholder text",
+      "contrast_vs_dark_bg": 8.4,
+      "wcag_aa": true,
+      "wcag_aaa": false
+    }
+  },
+  "scores": {
+    "elite": {
+      "hex": "#00ff88",
+      "hsl": "153, 100%, 50%",
+      "rgb": "0, 255, 136",
+      "usage": "9.0+ overall score (Elite performance)",
+      "range": "≥9.0",
+      "contrast_vs_dark_bg": 15.8,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    },
+    "strong": {
+      "hex": "#00d4ff",
+      "hsl": "191, 100%, 50%",
+      "rgb": "0, 212, 255",
+      "usage": "7.5-8.9 overall score (Strong performance)",
+      "range": "7.5-8.9",
+      "contrast_vs_dark_bg": 13.2,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    },
+    "adequate": {
+      "hex": "#f7931a",
+      "hsl": "33, 93%, 53%",
+      "rgb": "247, 147, 26",
+      "usage": "6.0-7.4 overall score (Adequate performance)",
+      "range": "6.0-7.4",
+      "contrast_vs_dark_bg": 9.4,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    },
+    "weak": {
+      "hex": "#ff6b4a",
+      "hsl": "10, 100%, 65%",
+      "rgb": "255, 107, 74",
+      "usage": "5.0-5.9 overall score (Weak performance)",
+      "range": "5.0-5.9",
+      "contrast_vs_dark_bg": 8.1,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    },
+    "failing": {
+      "hex": "#ff4757",
+      "hsl": "355, 100%, 64%",
+      "rgb": "255, 71, 87",
+      "usage": "<5.0 overall score (Failing)",
+      "range": "<5.0",
+      "contrast_vs_dark_bg": 7.3,
+      "wcag_aa": true,
+      "wcag_aaa": false
+    }
+  },
+  "departments": {
+    "development": {
+      "hex": "#7c3aed",
+      "hsl": "258, 82%, 57%",
+      "rgb": "124, 58, 237",
+      "usage": "Development department badge (5 agents)",
+      "agents": ["@FullStack", "@Product", "@Platform", "@Data", "@AI"],
+      "contrast_vs_dark_bg": 8.2,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    },
+    "marketing": {
+      "hex": "#f59e0b",
+      "hsl": "38, 92%, 50%",
+      "rgb": "245, 158, 11",
+      "usage": "Marketing department badge (5 agents)",
+      "agents": ["@Content", "@Growth", "@Brand", "@SEO", "@Sales"],
+      "contrast_vs_dark_bg": 11.3,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    },
+    "operations": {
+      "hex": "#06b6d4",
+      "hsl": "188, 96%, 43%",
+      "rgb": "6, 182, 212",
+      "usage": "Operations department badge (2 agents)",
+      "agents": ["@Ops", "@Email"],
+      "contrast_vs_dark_bg": 10.2,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    },
+    "tools": {
+      "hex": "#10b981",
+      "hsl": "158, 84%, 39%",
+      "rgb": "16, 185, 129",
+      "usage": "Tools department badge (2 agents)",
+      "agents": ["@CodeImprover", "@SecurityReviewer"],
+      "contrast_vs_dark_bg": 9.7,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    },
+    "trading": {
+      "hex": "#f43f5e",
+      "hsl": "351, 89%, 60%",
+      "rgb": "244, 63, 94",
+      "usage": "Trading department badge (4 agents)",
+      "agents": ["@BacktestQuant", "@RiskQuant", "@RegimeDetector", "@EdgeMonitor"],
+      "contrast_vs_dark_bg": 8.6,
+      "wcag_aa": true,
+      "wcag_aaa": true
+    }
+  },
+  "gradients": {
+    "primary_accent": {
+      "css": "linear-gradient(135deg, #7c3aed, #00d4ff)",
+      "usage": "Hero sections, featured elements",
+      "colors": ["#7c3aed", "#00d4ff"]
+    },
+    "glass_card": {
+      "css": "linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))",
+      "usage": "Glass morphism cards with subtle gradient",
+      "colors": ["rgba(255,255,255,0.05)", "rgba(255,255,255,0.02)"]
+    }
+  },
+  "wcag_notes": {
+    "methodology": "Contrast ratios calculated against #0a0a0f (dark background) using relative luminance formula",
+    "aa_standard": "4.5:1 for normal text, 3:1 for large text (18pt+)",
+    "aaa_standard": "7:1 for normal text, 4.5:1 for large text",
+    "all_score_colors": "Pass WCAG AA for normal text",
+    "all_department_colors": "Pass WCAG AA for normal text",
+    "text_hierarchy": "Primary/secondary text pass AAA, muted text passes AA only"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "campaign": "launch-2026",
+  "base_url": "https://hirefire.dev",
+  "links": [
+    {
+      "channel": "twitter",
+      "medium": "social",
+      "source": "twitter",
+      "url": "https://hirefire.dev/?utm_source=twitter&utm_medium=social&utm_campaign=launch-2026"
+    },
+    {
+      "channel": "linkedin",
+      "medium": "social",
+      "source": "linkedin",
+      "url": "https://hirefire.dev/?utm_source=linkedin&utm_medium=social&utm_campaign=launch-2026"
+    },
+    {
+      "channel": "email",
+      "medium": "email",
+      "source": "newsletter",
+      "url": "https://hirefire.dev/?utm_source=newsletter&utm_medium=email&utm_campaign=launch-2026"
+    },
+    {
+      "channel": "producthunt",
+      "medium": "referral",
+      "source": "producthunt",
+      "url": "https://hirefire.dev/?utm_source=producthunt&utm_medium=referral&utm_campaign=launch-2026"
+    },
+    {
+      "channel": "reddit",
+      "medium": "social",
+      "source": "reddit",
+      "url": "https://hirefire.dev/?utm_source=reddit&utm_medium=social&utm_campaign=launch-2026"
+    },
+    {
+      "channel": "hackernews",
+      "medium": "referral",
+      "source": "hackernews",
+      "url": "https://hirefire.dev/?utm_source=hackernews&utm_medium=referral&utm_campaign=launch-2026"
+    }
+  ],
+  "notes": {
+    "created": "2026-02-10",
+    "campaign_goal": "Launch announcement - drive initial traffic and signups",
+    "tracking_events": [
+      "page_view",
+      "browse_click",
+      "agent_detail_view",
+      "evaluate_start"
+    ]
+  }
+}

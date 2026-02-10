@@ -61,22 +61,20 @@ DELETE FROM agents WHERE id = '[agent_id]';
 
 ### Step 4: Clean up files
 
-Remove the agent definition file:
+Remove the agent definition files:
 ```bash
 rm -f /home/marc/DEV/claude/agent-evaluation/agents/[agent_id].md
+rm -f /home/marc/.claude/agents/[agent_id].md
 ```
 
-### Step 5: Update CLAUDE-TEAM.md
+### Step 5: Auto-deploy to update global reference
 
-Remove the agent's section from `/home/marc/DEV/claude/agent-evaluation/agents/CLAUDE-TEAM.md`.
-
-Update the routing table and agent count.
+Run the `/deploy-agents` skill to regenerate the CLAUDE.md reference table without this agent.
 
 ### Step 6: Confirm
 
 Show:
 - Agent removed from database
 - [N] evaluations deleted
-- Agent file removed
-- CLAUDE-TEAM.md updated
-- Remind: run `/deploy-agents` to sync the removal to `~/.claude/agents/`
+- Agent files removed (local + global)
+- CLAUDE.md reference table updated

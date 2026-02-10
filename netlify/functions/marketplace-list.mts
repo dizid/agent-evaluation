@@ -6,7 +6,6 @@ export default async function handler(req: Request) {
   if (req.method === 'OPTIONS') return cors()
 
   try {
-    // Route: GET /api/marketplace — browse marketplace templates (public)
     if (req.method === 'GET') {
       return handleList(req)
     }
@@ -24,7 +23,7 @@ async function handleList(req: Request) {
 
   // Parse query params
   const category = url.searchParams.get('category')
-  const sort = url.searchParams.get('sort') || 'installs' // installs|rating|recent
+  const sort = url.searchParams.get('sort') || 'installs'
   const search = url.searchParams.get('search')
   const limitParam = url.searchParams.get('limit')
   const offsetParam = url.searchParams.get('offset')
@@ -32,49 +31,132 @@ async function handleList(req: Request) {
   const limit = limitParam ? Math.min(Math.max(1, Number(limitParam)), 100) : 50
   const offset = offsetParam ? Math.max(0, Number(offsetParam)) : 0
 
-  // Build WHERE clause
-  const whereClauses: string[] = ['is_public = true']
-  const params: any[] = []
+  // Use tagged templates with conditional filtering
+  // The Neon serverless driver only supports tagged template syntax
+  let templates
+  let countResult
 
-  if (category) {
-    whereClauses.push(`category = $${params.length + 1}`)
-    params.push(category)
-  }
-
-  if (search && search.trim().length > 0) {
+  if (category && search) {
     const searchPattern = `%${search.trim()}%`
-    whereClauses.push(`(name ILIKE $${params.length + 1} OR description ILIKE $${params.length + 2})`)
-    params.push(searchPattern, searchPattern)
+    if (sort === 'rating') {
+      templates = await sql`
+        SELECT * FROM agent_templates
+        WHERE is_public = true AND category = ${category}
+          AND (name ILIKE ${searchPattern} OR description ILIKE ${searchPattern})
+        ORDER BY avg_rating DESC NULLS LAST, install_count DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    } else if (sort === 'recent') {
+      templates = await sql`
+        SELECT * FROM agent_templates
+        WHERE is_public = true AND category = ${category}
+          AND (name ILIKE ${searchPattern} OR description ILIKE ${searchPattern})
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    } else {
+      templates = await sql`
+        SELECT * FROM agent_templates
+        WHERE is_public = true AND category = ${category}
+          AND (name ILIKE ${searchPattern} OR description ILIKE ${searchPattern})
+        ORDER BY install_count DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    }
+    countResult = await sql`
+      SELECT COUNT(*)::int AS total FROM agent_templates
+      WHERE is_public = true AND category = ${category}
+        AND (name ILIKE ${searchPattern} OR description ILIKE ${searchPattern})
+    `
+  } else if (category) {
+    if (sort === 'rating') {
+      templates = await sql`
+        SELECT * FROM agent_templates
+        WHERE is_public = true AND category = ${category}
+        ORDER BY avg_rating DESC NULLS LAST, install_count DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    } else if (sort === 'recent') {
+      templates = await sql`
+        SELECT * FROM agent_templates
+        WHERE is_public = true AND category = ${category}
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    } else {
+      templates = await sql`
+        SELECT * FROM agent_templates
+        WHERE is_public = true AND category = ${category}
+        ORDER BY install_count DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    }
+    countResult = await sql`
+      SELECT COUNT(*)::int AS total FROM agent_templates
+      WHERE is_public = true AND category = ${category}
+    `
+  } else if (search) {
+    const searchPattern = `%${search.trim()}%`
+    if (sort === 'rating') {
+      templates = await sql`
+        SELECT * FROM agent_templates
+        WHERE is_public = true
+          AND (name ILIKE ${searchPattern} OR description ILIKE ${searchPattern})
+        ORDER BY avg_rating DESC NULLS LAST, install_count DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    } else if (sort === 'recent') {
+      templates = await sql`
+        SELECT * FROM agent_templates
+        WHERE is_public = true
+          AND (name ILIKE ${searchPattern} OR description ILIKE ${searchPattern})
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    } else {
+      templates = await sql`
+        SELECT * FROM agent_templates
+        WHERE is_public = true
+          AND (name ILIKE ${searchPattern} OR description ILIKE ${searchPattern})
+        ORDER BY install_count DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    }
+    countResult = await sql`
+      SELECT COUNT(*)::int AS total FROM agent_templates
+      WHERE is_public = true
+        AND (name ILIKE ${searchPattern} OR description ILIKE ${searchPattern})
+    `
+  } else {
+    // No filters — just sort
+    if (sort === 'rating') {
+      templates = await sql`
+        SELECT * FROM agent_templates
+        WHERE is_public = true
+        ORDER BY avg_rating DESC NULLS LAST, install_count DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    } else if (sort === 'recent') {
+      templates = await sql`
+        SELECT * FROM agent_templates
+        WHERE is_public = true
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    } else {
+      templates = await sql`
+        SELECT * FROM agent_templates
+        WHERE is_public = true
+        ORDER BY install_count DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `
+    }
+    countResult = await sql`
+      SELECT COUNT(*)::int AS total FROM agent_templates
+      WHERE is_public = true
+    `
   }
 
-  const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''
-
-  // Build ORDER BY clause
-  let orderBy = 'install_count DESC'
-  if (sort === 'rating') {
-    orderBy = 'avg_rating DESC NULLS LAST, install_count DESC'
-  } else if (sort === 'recent') {
-    orderBy = 'created_at DESC'
-  }
-
-  // Execute query with parameterized values
-  const query = `
-    SELECT * FROM agent_templates
-    ${whereClause}
-    ORDER BY ${orderBy}
-    LIMIT $${params.length + 1} OFFSET $${params.length + 2}
-  `
-  params.push(limit, offset)
-
-  const templates = await sql.unsafe(query, params)
-
-  // Get total count for pagination
-  const countQuery = `
-    SELECT COUNT(*) as total FROM agent_templates
-    ${whereClause}
-  `
-  const countParams = params.slice(0, -2) // Remove limit and offset
-  const countResult = await sql.unsafe(countQuery, countParams)
   const total = Number(countResult[0]?.total || 0)
 
   return json(

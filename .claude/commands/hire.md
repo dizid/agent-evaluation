@@ -62,8 +62,8 @@ Use mcp__Neon__run_sql: SELECT id FROM agents WHERE id = '[agent_id]'
 Then insert the agent:
 ```
 Use mcp__Neon__run_sql:
-INSERT INTO agents (id, name, department, role, persona, kpi_definitions)
-VALUES ('[agent_id]', '@[DisplayName]', '[department]', '[Role]', '[persona]', '["kpi1", "kpi2", "kpi3", "kpi4"]'::jsonb);
+INSERT INTO agents (id, name, department, role, persona, kpi_definitions, source_path)
+VALUES ('[agent_id]', '@[DisplayName]', '[department]', '[Role]', '[persona]', '["kpi1", "kpi2", "kpi3", "kpi4"]'::jsonb, 'agents/[agent_id].md');
 ```
 
 Then insert the KPI criteria:
@@ -76,16 +76,14 @@ INSERT INTO criteria (id, name, description, category, applies_to, sort_order) V
 ('[kpi4_id]', '[KPI 4 Name]', '[description]', 'role_kpi', ARRAY['[agent_id]'], 4);
 ```
 
-### Step 4: Update CLAUDE-TEAM.md
+### Step 4: Auto-deploy to global agents
 
-Add the new agent's section to `/home/marc/DEV/claude/agent-evaluation/agents/CLAUDE-TEAM.md` in the appropriate department section, following the existing format.
-
-Update the routing table at the top if applicable.
+Run the `/deploy-agents` skill to sync this agent to `~/.claude/agents/` (makes it available globally).
 
 ### Step 5: Confirm
 
 Show:
 - Agent file created at: `agents/[agent_id].md`
 - Database entry created with 4 KPIs
+- Deployed to: `~/.claude/agents/[agent_id].md`
 - Dashboard link: `https://dizid-agenteval.netlify.app/agent/[agent_id]`
-- Remind: run `/deploy-agents` to sync to `~/.claude/agents/` (makes it available globally)

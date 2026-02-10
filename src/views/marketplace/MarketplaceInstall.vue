@@ -44,7 +44,9 @@ onMounted(async () => {
     // Pre-fill form
     agentId.value = template.value.id || ''
     displayName.value = template.value.name || ''
-    selectedDepartment.value = template.value.category || (departments.value[0]?.id || '')
+    // Match template category (slug) to a department UUID, fallback to first dept
+    const matchedDept = departments.value.find(d => d.slug === template.value.category)
+    selectedDepartment.value = matchedDept?.id || departments.value[0]?.id || ''
     customPersona.value = template.value.persona || ''
   } catch (e) {
     error.value = e.message
@@ -87,7 +89,7 @@ const handleInstall = async () => {
     const customization = {
       agent_id: agentId.value,
       name: displayName.value,
-      department: selectedDepartment.value,
+      department_id: selectedDepartment.value,
       persona: customPersona.value
     }
 

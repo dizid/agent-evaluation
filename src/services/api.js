@@ -310,7 +310,7 @@ export const getMarketplaceTemplates = (params = {}) => {
 export const getMarketplaceTemplate = (id) => fetchWithCache(`/marketplace/${id}`)
 
 export const installTemplate = (templateId, customization = {}) => {
-  return request(`/marketplace/${templateId}/install`, {
+  return request(`/marketplace/${templateId}?action=install`, {
     method: 'POST',
     body: JSON.stringify(customization)
   }).then(result => {
@@ -321,7 +321,7 @@ export const installTemplate = (templateId, customization = {}) => {
 }
 
 export const submitTemplateReview = (templateId, data) => {
-  return request(`/marketplace/${templateId}/reviews`, {
+  return request(`/marketplace/${templateId}?action=review`, {
     method: 'POST',
     body: JSON.stringify(data)
   }).then(result => {

@@ -28,10 +28,16 @@ if [[ ! " $DIZID_AGENTS " =~ " $AGENT_TYPE " ]]; then
   exit 0
 fi
 
-# Require API key
+# Require API key + service key for authenticated API calls
 if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
   exit 0
 fi
+if [ -z "${SERVICE_KEY:-}" ]; then
+  exit 0
+fi
+
+# API base URL
+API_BASE="https://hirefire.dev"
 
 # Detect project name from git
 PROJECT=$(basename "$(git -C "$CWD" rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")
@@ -47,8 +53,9 @@ TRANSCRIPT_EXCERPT="$TRANSCRIPT_HEAD
 ...
 $TRANSCRIPT_TAIL"
 
-# Fetch agent's KPI definitions from the API
-AGENT_INFO=$(curl -sf "https://dizid-agenteval.netlify.app/api/agents/$AGENT_TYPE" 2>/dev/null || echo '{}')
+# Fetch agent's KPI definitions from the API (with service key auth)
+AGENT_INFO=$(curl -sf "$API_BASE/api/agents/$AGENT_TYPE" \
+  -H "X-Service-Key: $SERVICE_KEY" 2>/dev/null || echo '{}')
 KPIS=$(echo "$AGENT_INFO" | jq -r '.agent.kpi_definitions // [] | join(", ")' 2>/dev/null || echo "")
 
 # Build scoring prompt
@@ -131,9 +138,10 @@ if [ -z "$SCORES" ] || [ "$SCORES" = "null" ]; then
   exit 0
 fi
 
-# POST to AgentEval API
-curl -sf "https://dizid-agenteval.netlify.app/api/evaluations" \
+# POST to AgentEval API (with service key auth)
+curl -sf "$API_BASE/api/evaluations" \
   -H "content-type: application/json" \
+  -H "X-Service-Key: $SERVICE_KEY" \
   -d "$(jq -n \
     --arg agent_id "$AGENT_TYPE" \
     --argjson scores "$SCORES" \

@@ -46,8 +46,7 @@ Wait for explicit confirmation before proceeding. If the user says no, stop.
 For each action item, grouped by agent:
 
 1. **Determine the file path:**
-   - If `source_type = 'dizid'`: file is at `/home/marc/DEV/claude/agent-evaluation/agents/[agent_id].md`
-   - If `source_type = 'claude-agent'`: file is at the `source_path` value (e.g., `~/.claude/agents/[name].md`)
+   - All agents: `/home/marc/DEV/claude/agent-evaluation/agents/[agent_id].md`
    - If the file doesn't exist, skip this item and report: "Skipped: no source file for [agent_name]"
 
 2. **Read** the agent's `.md` file
@@ -78,19 +77,9 @@ UPDATE evaluations SET applied = true, applied_at = NOW() WHERE id = [eval_id]
 
 Run one UPDATE per item (Neon MCP only accepts single statements).
 
-### Step 5: Update CLAUDE-TEAM.md
+### Step 5: Auto-deploy
 
-Read `/home/marc/DEV/claude/agent-evaluation/agents/CLAUDE-TEAM.md`.
-
-For each agent that received new rules, find their section in CLAUDE-TEAM.md. The format uses `**Behavior rules:**` (bold, lowercase "r") followed by bullet points. Insert the new rule as the first bullet under `**Behavior rules:**`:
-
-```
-**Behavior rules:**
-- [new action item text]
-- [existing rule 1]
-```
-
-Write the updated file.
+Run the `/deploy-agents` skill to sync updated agent files to `~/.claude/agents/` and regenerate the CLAUDE.md reference table.
 
 ### Step 6: Report results
 
@@ -107,16 +96,14 @@ Show a summary:
 
 Applied: [N] | Skipped: [M]
 Files updated: [list of filenames]
-CLAUDE-TEAM.md: updated
-
-Run `/deploy-agents` to sync changes to ~/.claude/agents/ (makes them available globally).
+Deployed to: ~/.claude/agents/ + CLAUDE.md reference table updated
 ```
 
 ## Notes
 
 - This command runs LOCALLY in Claude Code -- it has full filesystem access
 - The Neon project ID is `calm-cherry-13678492`
-- Agent files use `## Behavior Rules` (heading), CLAUDE-TEAM.md uses `**Behavior rules:**` (bold)
+- All agent files live in `agents/[id].md` (single source of truth)
 - Always ask for confirmation before making changes
 - Mark items as applied even if skipped as duplicate (prevents re-processing)
 - The `applied` and `applied_at` columns are added by migration 009

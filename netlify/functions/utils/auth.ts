@@ -1,11 +1,6 @@
-import { createClerkClient } from '@clerk/backend'
+import { verifyToken } from '@clerk/backend'
 import { sql } from './database.ts'
 import { error } from './response.ts'
-
-// Initialize Clerk client
-const clerk = createClerkClient({
-  secretKey: process.env.CLERK_SECRET_KEY!
-})
 
 // Auth context returned to handlers after verification
 export interface AuthContext {
@@ -28,12 +23,30 @@ const ROLE_HIERARCHY: Record<string, number> = {
  * Authenticate a request and return the auth context.
  * Returns an AuthContext on success, or a Response (401/403) on failure.
  *
+ * Supports two auth methods:
+ * 1. Clerk JWT via Authorization: Bearer <token>
+ * 2. Service key via X-Service-Key header (for machine-to-machine, e.g., auto-eval hook)
+ *
  * Usage in handlers:
  *   const ctx = await authenticate(req)
  *   if (ctx instanceof Response) return ctx
  *   // ctx is AuthContext — use ctx.orgId to scope queries
  */
 export async function authenticate(req: Request): Promise<AuthContext | Response> {
+  // Check for service key (machine-to-machine, e.g., auto-eval hook)
+  const serviceKey = req.headers.get('X-Service-Key')
+  if (serviceKey && process.env.SERVICE_KEY && serviceKey === process.env.SERVICE_KEY) {
+    const org = await sql`SELECT id, slug FROM organizations WHERE slug = 'dizid' LIMIT 1`
+    if (org.length === 0) return error('Service org not found', 500)
+    return {
+      userId: 'a0000001-0000-0000-0000-000000000001',
+      clerkUserId: 'service',
+      orgId: org[0].id,
+      orgSlug: org[0].slug,
+      userRole: 'admin' as const
+    }
+  }
+
   // Extract JWT from Authorization header
   const authHeader = req.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
@@ -48,8 +61,9 @@ export async function authenticate(req: Request): Promise<AuthContext | Response
   // Verify JWT with Clerk
   let clerkUserId: string
   try {
-    const verified = await clerk.verifyToken(token, {
-      jwtKey: process.env.CLERK_JWT_KEY
+    const verified = await verifyToken(token, {
+      secretKey: process.env.CLERK_SECRET_KEY!,
+      authorizedParties: ['http://localhost:3000', 'https://hirefire.dev']
     })
     clerkUserId = verified.sub
   } catch (err) {
@@ -58,29 +72,24 @@ export async function authenticate(req: Request): Promise<AuthContext | Response
   }
 
   // Look up user in our database
-  const users = await sql`
+  let users = await sql`
     SELECT id FROM users WHERE clerk_user_id = ${clerkUserId}
   `
   if (users.length === 0) {
     // User exists in Clerk but not in our DB yet — create on the fly
     // (webhook may not have fired yet, especially in dev)
-    const newUser = await sql`
+    users = await sql`
       INSERT INTO users (clerk_user_id, email, full_name)
       VALUES (${clerkUserId}, '', '')
       ON CONFLICT (clerk_user_id) DO UPDATE SET last_seen_at = NOW()
       RETURNING id
     `
-    if (newUser.length === 0) {
+    if (users.length === 0) {
       return error('User setup failed', 500)
     }
-    // Return 403 — user exists but has no org yet (needs onboarding)
-    // Frontend should redirect to /onboarding
   }
 
-  const userId = users.length > 0 ? users[0].id : null
-  if (!userId) {
-    return error('User not found. Please complete onboarding.', 403)
-  }
+  const userId = users[0].id
 
   // Determine org context from X-Org-Slug header or default to first org
   const orgSlug = req.headers.get('X-Org-Slug')
@@ -147,7 +156,8 @@ export function authorize(ctx: AuthContext, requiredRole: 'viewer' | 'evaluator'
  */
 export async function optionalAuth(req: Request): Promise<AuthContext | null> {
   const authHeader = req.headers.get('Authorization')
-  if (!authHeader?.startsWith('Bearer ')) return null
+  const serviceKey = req.headers.get('X-Service-Key')
+  if (!authHeader?.startsWith('Bearer ') && !serviceKey) return null
 
   const result = await authenticate(req)
   if (result instanceof Response) return null

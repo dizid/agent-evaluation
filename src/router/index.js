@@ -15,13 +15,13 @@ const routes = [
     meta: { title: 'Pricing — AgentEval', public: true }
   },
   {
-    path: '/sign-in',
+    path: '/sign-in/:pathMatch(.*)*',
     name: 'sign-in',
     component: () => import('../views/auth/SignIn.vue'),
     meta: { title: 'Sign In — AgentEval', public: true }
   },
   {
-    path: '/sign-up',
+    path: '/sign-up/:pathMatch(.*)*',
     name: 'sign-up',
     component: () => import('../views/auth/SignUp.vue'),
     meta: { title: 'Sign Up — AgentEval', public: true }
