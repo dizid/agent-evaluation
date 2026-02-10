@@ -62,8 +62,8 @@ Use mcp__Neon__run_sql: SELECT id FROM agents WHERE id = '[agent_id]'
 Then insert the agent:
 ```
 Use mcp__Neon__run_sql:
-INSERT INTO agents (id, name, department, role, persona, kpi_definitions, source_path)
-VALUES ('[agent_id]', '@[DisplayName]', '[department]', '[Role]', '[persona]', '["kpi1", "kpi2", "kpi3", "kpi4"]'::jsonb, 'agents/[agent_id].md');
+INSERT INTO agents (id, name, department, role, persona, kpi_definitions, source_path, source_type)
+VALUES ('[agent_id]', '@[DisplayName]', '[department]', '[Role]', '[persona]', '["kpi1", "kpi2", "kpi3", "kpi4"]'::jsonb, 'agents/[agent_id].md', 'dizid');
 ```
 
 Then insert the KPI criteria:

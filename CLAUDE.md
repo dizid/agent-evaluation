@@ -26,15 +26,15 @@ npm test             # Vitest with coverage
 - `VITE_CLERK_PUBLISHABLE_KEY` — Clerk frontend key (pk_test_... or pk_live_...)
 - `CLERK_SECRET_KEY` — Clerk backend key
 - `CLERK_WEBHOOK_SECRET` — Svix signing secret for `/api/webhooks/clerk`
+- `SERVICE_KEY` — (optional) machine-to-machine auth for auto-eval hook
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
 | `framework/FRAMEWORK.md` | Evaluation criteria, KPIs, scoring formula |
-| `agents/CLAUDE-TEAM.md` | Dizid agent definitions with toolboxes |
-| `agents/*.md` | Individual agent persona files |
-| `migrations/*.sql` | Database schema and seed data (001-011) |
+| `agents/*.md` | Individual agent persona files (single source of truth) |
+| `migrations/*.sql` | Database schema and seed data (001-012) |
 | `netlify/functions/*.mts` | API endpoints |
 | `netlify/functions/utils/auth.ts` | Clerk JWT verification, org context, RBAC |
 | `netlify/functions/utils/database.ts` | Neon connection helper |
@@ -44,6 +44,8 @@ npm test             # Vitest with coverage
 | `src/composables/useOrgContext.js` | Org switching, RBAC permission checks |
 | `src/services/api.js` | Frontend API client |
 | `src/services/scoring.js` | Score formatting utilities |
+| `src/composables/useToast.js` | Toast notification system |
+| `vitest.config.js` | Test configuration (Vitest + happy-dom) |
 
 ## Architecture
 
@@ -90,7 +92,8 @@ npm test             # Vitest with coverage
 | GET | `/api/categories` | categories.mts | yes | Department stats |
 | GET | `/api/organizations` | orgs.mts | yes | User's orgs |
 | POST | `/api/organizations` | orgs.mts | yes | Create org |
-| GET/POST/PUT/DELETE | `/api/departments` | departments.mts | yes | Department CRUD |
+| GET/POST | `/api/departments` | departments.mts | yes | List/create departments |
+| PUT/DELETE | `/api/departments/:id` | departments-detail.mts | yes | Update/delete department |
 | GET/PUT | `/api/users/me` | users-me.mts | yes | User profile |
 | GET | `/api/dashboard` | dashboard.mts | yes | Org overview stats |
 | GET | `/api/marketplace` | marketplace-list.mts | no | Browse templates |
@@ -175,7 +178,7 @@ npm test             # Vitest with coverage
 
 ## Using Agents Across Projects
 
-All 12 Dizid agents are defined globally in `~/.claude/CLAUDE.md` and available in every project.
+All 18 agents (12 Dizid + 6 Claude Code custom) are defined globally in `~/.claude/CLAUDE.md` and available in every project.
 
 ### Workflow
 1. **Use agents naturally** — say "as @SEO, audit this page" or "route to @Growth"
@@ -186,9 +189,9 @@ All 12 Dizid agents are defined globally in `~/.claude/CLAUDE.md` and available 
 ### Where Things Live
 | What | Where | Purpose |
 |------|-------|---------|
-| Agent personas + behavior rules | `~/.claude/CLAUDE.md` | Global — loaded in every project |
-| Individual agent files | `agents/*.md` | Source of truth for AgentEval |
-| Combined team reference | `agents/CLAUDE-TEAM.md` | Detailed version with toolbox |
+| Agent persona files | `agents/*.md` | Single source of truth (18 files) |
+| Global agent copies | `~/.claude/agents/*.md` | Synced via `/deploy-agents` |
+| Global reference table | `~/.claude/CLAUDE.md` | Compact routing table (no inline defs) |
 | Evaluation data | Neon PostgreSQL | Scores, trends, action items |
 | Dashboard | hirefire.dev | Visual leaderboard and history |
 
@@ -196,7 +199,7 @@ All 12 Dizid agents are defined globally in `~/.claude/CLAUDE.md` and available 
 1. Rate agents via `/rate` or the web UI at `/evaluate`
 2. Check action items on the agent detail page
 3. Edit persona in `agents/{name}.md` based on action items
-4. Sync changes to `~/.claude/CLAUDE.md` (global) and `agents/CLAUDE-TEAM.md`
+4. Run `/deploy-agents` to sync changes globally
 
 ## Rules
 
