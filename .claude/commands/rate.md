@@ -83,7 +83,7 @@ basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unk
 ```
 
 Build the scores object using the criterion IDs as keys:
-- task_completion, accuracy, efficiency, judgment, communication, domain_expertise, autonomy, safety_compliance
+- task_completion, accuracy, efficiency, judgment, communication, domain_expertise, autonomy, safety
 - Plus the agent's role-specific KPI IDs (e.g., code_quality, first_pass_success, etc.)
 
 Submit via curl:

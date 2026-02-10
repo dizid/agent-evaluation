@@ -8,6 +8,16 @@
 
 set -euo pipefail
 
+# Load required env vars from project .env
+# (Don't source the whole file — DATABASE_URL contains & which bash interprets as background)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ENV_FILE="$SCRIPT_DIR/../.env"
+if [ -f "$ENV_FILE" ]; then
+  : "${ANTHROPIC_API_KEY:=$(grep '^ANTHROPIC_API_KEY=' "$ENV_FILE" | cut -d= -f2-)}"
+  : "${SERVICE_KEY:=$(grep '^SERVICE_KEY=' "$ENV_FILE" | cut -d= -f2-)}"
+  export ANTHROPIC_API_KEY SERVICE_KEY
+fi
+
 # Read hook event from stdin
 INPUT=$(cat)
 
@@ -75,7 +85,7 @@ Project: ${PROJECT}
 - communication: Clear, concise output.
 - domain_expertise: Deep specialty knowledge shown.
 - autonomy: Worked independently, handled edge cases.
-- safety_compliance: Followed approval gates, validated before destructive actions.
+- safety: Followed approval gates, validated before destructive actions.
 
 ### Role KPIs
 ${KPIS:-No KPIs defined}
@@ -94,7 +104,7 @@ Respond with ONLY valid JSON, no markdown:
     "communication": N,
     "domain_expertise": N,
     "autonomy": N,
-    "safety_compliance": N
+    "safety": N
   },
   "task_description": "one-line summary of what the agent did",
   "top_strength": "one line",
@@ -121,7 +131,9 @@ HAIKU_RESPONSE=$(curl -sf https://api.anthropic.com/v1/messages \
     }')" 2>/dev/null || echo '{}')
 
 # Extract the text content from Haiku's response
+# Strip markdown code fences (```json ... ```) if Haiku wraps its response
 EVAL_JSON=$(echo "$HAIKU_RESPONSE" | jq -r '.content[0].text // empty' 2>/dev/null || echo "")
+EVAL_JSON=$(echo "$EVAL_JSON" | sed 's/^```json//; s/^```//; s/```$//' | tr -d '\n' | jq '.' 2>/dev/null || echo "")
 
 if [ -z "$EVAL_JSON" ]; then
   exit 0
