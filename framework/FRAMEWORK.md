@@ -1,6 +1,6 @@
 # Agent Evaluation Framework
 
-Scoring system for the 11 Dizid virtual agents. Used by `/rate` (quick) and `/evaluate-agent` (weekly deep review).
+Scoring system for 18 agents across 5 departments. Used by `/rate` (quick) and `/evaluate-agent` (weekly deep review).
 
 ---
 
@@ -16,7 +16,7 @@ Scoring system for the 11 Dizid virtual agents. Used by `/rate` (quick) and `/ev
 
 ---
 
-## Universal Criteria (all 11 agents, scored 1-10)
+## Universal Criteria (all agents, scored 1-10)
 
 | # | Criterion | What It Measures | Scoring Guide |
 |---|-----------|-----------------|---------------|
@@ -135,6 +135,58 @@ Scoring system for the 11 Dizid virtual agents. Used by `/rate` (quick) and `/ev
 | Automation Reliability | Error handling, retry logic, logging in Zapier/Make/n8n workflows, no silent failures |
 | Lifecycle Strategy | Maps emails to customer lifecycle stages with measurable goals per stage |
 
+### Tools
+
+**@CodeImprover** — Code Review & Refactoring
+| KPI | What to Look For |
+|-----|-----------------|
+| Fix Precision | Changes target the exact issue without over-engineering or collateral edits |
+| Pattern Adherence | Respects project's existing patterns (raw SQL vs ORM, file structure, naming) |
+| Explanation Clarity | Explanations are proportional to change complexity, not verbose for simple fixes |
+| Scope Discipline | Stays focused on the requested review scope, doesn't expand into unasked refactors |
+
+**@SecurityReviewer** — Security Vulnerability Detection
+| KPI | What to Look For |
+|-----|-----------------|
+| Vulnerability Detection | Catches real security issues: SQL injection, XSS, auth bypass, secrets exposure |
+| False Positive Rate | Doesn't cry wolf — findings are genuine risks, not pedantic warnings |
+| Remediation Quality | Provides specific code fixes alongside vulnerability descriptions, not vague advice |
+| Coverage Breadth | Reviews all attack surfaces: inputs, auth, queries, deps, CORS, headers |
+
+### Trading
+
+**@BacktestQuant** — Backtest Architect
+| KPI | What to Look For |
+|-----|-----------------|
+| Walk-Forward Rigor | Every strategy tested out-of-sample with realistic train/test splits |
+| Cost Modeling | Includes slippage, commissions, spread, funding costs as separate line items |
+| Monte Carlo Quality | Bootstrap simulations with 1000+ iterations, reports confidence intervals |
+| Overfit Detection | Flags in-sample vs out-of-sample Sharpe degradation > 40% |
+
+**@RiskQuant** — Risk Quantifier
+| KPI | What to Look For |
+|-----|-----------------|
+| Risk Metric Completeness | Reports full suite: Sharpe, Sortino, Calmar, max drawdown, profit factor, expectancy |
+| Position Sizing Accuracy | Kelly criterion with fractional safety margin, adjusted for correlation |
+| Drawdown Management | Triggers position reduction at 10% drawdown, flags strategies > 20% max DD |
+| Correlation Monitoring | Checks all active pairs (not just majors), flags correlation > 0.7 |
+
+**@RegimeDetector** — Regime Analyst
+| KPI | What to Look For |
+|-----|-----------------|
+| Classification Accuracy | Correctly identifies 5 regime types with quantitative boundaries |
+| Transition Detection | Flags transitions before they complete, uses multi-timeframe data (1h + 4h) |
+| Threshold Quality | Regime thresholds back-tested on 6+ months, tuned per asset |
+| Multi-Factor Coverage | Uses momentum, volatility, volume, correlation, and mean-reversion factors |
+
+**@EdgeMonitor** — Edge Decay Watchdog
+| KPI | What to Look For |
+|-----|-----------------|
+| Alert Timeliness | Catches degradation within 24h, bias checks run daily |
+| False Alarm Rate | YELLOW threshold tuned to minimize noise (0.5 not 0.4) |
+| Coverage Completeness | Every active model/coin monitored, no blind spots |
+| Actionability | Every alert includes specific recommended action (e.g., "reduce position X%") |
+
 ---
 
 ## Scoring Formula
@@ -193,10 +245,10 @@ Evaluator: Auto (CEO override)
 
 ## Improvement Loop
 
-1. **Rate** — Run `/rate @AgentName` after significant tasks
+1. **Rate** — Run `/rate @AgentName` after significant tasks (POSTs to API)
 2. **Review** — Weekly `/evaluate-agent` across all active agents
 3. **Diagnose** — Identify lowest-scoring criteria
-4. **Improve** — Tune agent persona in CLAUDE-TEAM.md (add instructions, examples, constraints)
+4. **Improve** — Tune agent persona in `agents/[agent-id].md`, then run `/deploy-agents`
 5. **Re-evaluate** — Run same/similar task, compare scores
 6. **Track** — Save scorecards to `docs/agent-evaluations/scorecards/` for trend analysis
 
@@ -205,18 +257,18 @@ Evaluator: Auto (CEO override)
 - **Target domain skills**, not meta-workflow behavior
 - **Be specific and testable** — "Verify SQL table names via MCP before documenting" not "Be more careful"
 - **One item per scorecard** — focus beats breadth
-- **Must be implementable** as a persona edit in CLAUDE-TEAM.md
+- **Must be implementable** as a persona edit in agent .md files
 
 ### What "Improve" Looks Like
 
-| Low Score In | Fix In CLAUDE-TEAM.md |
-|-------------|----------------------|
-| Task Completion | Add "Always complete the full task. Never leave TODOs." |
-| Accuracy | Add "Verify all code compiles. Double-check facts." |
-| Efficiency | Add "Solve in minimum steps. Don't over-engineer." |
-| Judgment | Add decision examples: "When X, do Y. When Z, ask CEO." |
-| Communication | Add "Max 3 paragraphs. Lead with the answer." |
-| Domain Expertise | Add specific tools, frameworks, or best practices to know |
-| Autonomy | Add "Handle errors yourself. Only escalate if truly blocked." |
-| Safety | Add specific approval gates or validation steps |
-| Role KPIs | Add role-specific instructions addressing the gap |
+| Low Score In | Fix In agents/*.md |
+|-------------|---------------------|
+| Task Completion | Add "Always complete the full task. Never leave TODOs." to `agents/fullstack.md` |
+| Accuracy | Add "Verify all code compiles. Double-check facts." to relevant agent file |
+| Efficiency | Add "Solve in minimum steps. Don't over-engineer." to agent persona |
+| Judgment | Add decision examples: "When X, do Y. When Z, ask CEO." to agent file |
+| Communication | Add "Max 3 paragraphs. Lead with the answer." to agent guidelines |
+| Domain Expertise | Add specific tools, frameworks, or best practices to `agents/[name].md` |
+| Autonomy | Add "Handle errors yourself. Only escalate if truly blocked." to agent file |
+| Safety | Add specific approval gates or validation steps to relevant agent |
+| Role KPIs | Add role-specific instructions addressing the gap to agent's .md file |

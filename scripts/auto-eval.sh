@@ -23,7 +23,7 @@ if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
 fi
 
 # Only evaluate Dizid team agents
-DIZID_AGENTS="fullstack product platform data ai growth content brand seo ops email"
+DIZID_AGENTS="fullstack product platform data ai growth content brand seo sales ops email code-improver security-reviewer backtest-quant risk-quant regime-detector edge-monitor"
 if [[ ! " $DIZID_AGENTS " =~ " $AGENT_TYPE " ]]; then
   exit 0
 fi
