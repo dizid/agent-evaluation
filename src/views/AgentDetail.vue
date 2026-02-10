@@ -97,6 +97,46 @@ const showChart = computed(() =>
 )
 
 const scoreColor = computed(() => getScoreColor(Number(agent.value?.overall_score)))
+
+// Parse structured persona text into labeled sections
+const personaSections = computed(() => {
+  const raw = agent.value?.persona
+  if (!raw) return []
+
+  const sectionLabels = ['Who:', 'Handles:', 'Tech:', 'Voice:', 'Behavior Rules:']
+  const sections = []
+  let remaining = raw.trim()
+
+  for (let i = 0; i < sectionLabels.length; i++) {
+    const label = sectionLabels[i]
+    const idx = remaining.indexOf(label)
+    if (idx === -1) continue
+
+    // Find end: next section start or end of string
+    let end = remaining.length
+    for (let j = i + 1; j < sectionLabels.length; j++) {
+      const nextIdx = remaining.indexOf(sectionLabels[j], idx + label.length)
+      if (nextIdx !== -1) { end = nextIdx; break }
+    }
+
+    const content = remaining.substring(idx + label.length, end).trim()
+    if (content) {
+      const key = label.replace(':', '')
+      const isList = key === 'Behavior Rules'
+      const items = isList
+        ? content.split('\n').map(l => l.replace(/^-\s*/, '').trim()).filter(Boolean)
+        : null
+      sections.push({ label: key, content, isList, items })
+    }
+  }
+
+  // Fallback: if no sections parsed, show raw text
+  if (sections.length === 0 && raw.trim()) {
+    sections.push({ label: null, content: raw.trim(), isList: false, items: null })
+  }
+
+  return sections
+})
 </script>
 
 <template>
@@ -201,8 +241,28 @@ const scoreColor = computed(() => getScoreColor(Number(agent.value?.overall_scor
             />
             {{ showPersona ? 'Hide persona' : 'Show persona' }}
           </button>
-          <div v-if="showPersona" class="mt-3 p-4 bg-eval-surface rounded-lg">
-            <p class="text-text-secondary text-sm whitespace-pre-line leading-relaxed">{{ agent.persona }}</p>
+          <div v-if="showPersona" class="mt-3 p-4 bg-eval-surface rounded-lg space-y-4">
+            <div v-for="(section, idx) in personaSections" :key="idx">
+              <!-- Section label -->
+              <div v-if="section.label" class="text-[11px] font-semibold uppercase tracking-wider text-accent mb-1.5">
+                {{ section.label }}
+              </div>
+
+              <!-- Bullet list for behavior rules -->
+              <ul v-if="section.isList" class="space-y-1.5 pl-0">
+                <li
+                  v-for="(item, i) in section.items"
+                  :key="i"
+                  class="text-text-secondary text-sm leading-relaxed flex gap-2"
+                >
+                  <span class="text-accent shrink-0 mt-0.5">&#8226;</span>
+                  <span>{{ item }}</span>
+                </li>
+              </ul>
+
+              <!-- Inline text for other sections -->
+              <p v-else class="text-text-secondary text-sm leading-relaxed">{{ section.content }}</p>
+            </div>
           </div>
         </div>
       </div>
