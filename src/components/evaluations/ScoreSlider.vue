@@ -77,11 +77,11 @@ const fillPercent = computed(() => ((props.modelValue - 1) / 9) * 100)
         aria-valuemax="10"
         class="score-slider w-full h-2 rounded-full appearance-none cursor-pointer bg-eval-surface
                [&::-webkit-slider-thumb]:appearance-none
-               [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6
+               [&::-webkit-slider-thumb]:w-8 [&::-webkit-slider-thumb]:h-8
                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
                [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:relative
                [&::-webkit-slider-thumb]:z-10
-               [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:h-6
+               [&::-moz-range-thumb]:w-8 [&::-moz-range-thumb]:h-8
                [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:cursor-pointer
                [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-lg"
       />

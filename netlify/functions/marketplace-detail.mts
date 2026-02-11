@@ -98,8 +98,8 @@ async function handleInstall(ctx: { userId: string; orgId: string }, templateId:
 
   // Extract customization options (all optional)
   const agentId = body.agent_id ? stripHtml(body.agent_id.trim()) : template.id
-  const name = body.name ? stripHtml(body.name.trim()) : template.name
-  const persona = body.persona ? stripHtml(body.persona.trim()) : template.persona
+  const name = body.name ? stripHtml(body.name.trim()).slice(0, 100) : template.name
+  const persona = body.persona ? stripHtml(body.persona.trim()).slice(0, 10000) : template.persona
 
   // Validate agent_id format
   if (!/^[a-z0-9-]{2,50}$/.test(agentId)) {

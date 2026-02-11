@@ -61,9 +61,15 @@ export default async function handler(req: Request) {
 
       case 'user.deleted': {
         const { id } = event.data
-        // Soft approach: just mark as deleted, don't cascade yet
-        // Orgs they own should remain (transfer ownership flow is separate)
-        await sql`DELETE FROM users WHERE clerk_user_id = ${id}`
+        // Look up internal user ID before deleting
+        const userRows = await sql`SELECT id FROM users WHERE clerk_user_id = ${id}`
+        if (userRows.length > 0) {
+          const userId = userRows[0].id
+          // Nullify evaluator reference so evaluations are preserved
+          await sql`UPDATE evaluations SET evaluator_user_id = NULL WHERE evaluator_user_id = ${userId}`
+          // Remove user (org_members cascade via FK)
+          await sql`DELETE FROM users WHERE id = ${userId}`
+        }
         break
       }
 

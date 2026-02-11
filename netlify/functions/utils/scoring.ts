@@ -94,7 +94,7 @@ export function needsJustification(score: number): boolean {
 // Determine trend by comparing new score to previous overall
 export function calculateTrend(newScore: number, previousScore: number | null): string {
   if (previousScore == null) return 'stable'
-  const diff = newScore - previousScore
+  const diff = Number(newScore) - Number(previousScore)
   if (diff >= 0.5) return 'up'
   if (diff <= -0.5) return 'down'
   return 'stable'

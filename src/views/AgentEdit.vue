@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
-import { getAgent, updateAgent, getActionItems, markActionItemApplied } from '@/services/api'
+import { getAgent, updateAgent, getActionItems, markActionItemApplied, markActionItemUnapplied, getDepartments } from '@/services/api'
 import { useToast } from '@/composables/useToast'
 import ScoreBadge from '@/components/ui/ScoreBadge.vue'
 import DeptBadge from '@/components/ui/DeptBadge.vue'
@@ -52,10 +52,18 @@ const isDirty = computed(() => {
   }) !== initialSnapshot.value
 })
 
-const departments = ['development', 'marketing', 'operations', 'tools', 'trading']
+const departments = ref([])
 
 onMounted(async () => {
   try {
+    // Fetch departments from API instead of hardcoding
+    try {
+      const deptData = await getDepartments()
+      departments.value = (deptData.departments || deptData || []).map(d => d.slug || d.name)
+    } catch {
+      departments.value = ['development', 'marketing', 'operations', 'tools', 'trading']
+    }
+
     const data = await getAgent(route.params.id)
     const a = data.agent || data
     agent.value = a
@@ -216,6 +224,20 @@ async function confirmApply() {
     toast.success('Action item marked as applied')
   } catch (e) {
     toast.error('Failed to mark as applied: ' + e.message)
+  } finally {
+    applyingId.value = null
+  }
+}
+
+async function handleUnapply(item) {
+  applyingId.value = item.evaluation_id
+  try {
+    await markActionItemUnapplied(route.params.id, item.evaluation_id)
+    item.applied = false
+    item.applied_at = null
+    toast.success('Action item marked as unapplied')
+  } catch (e) {
+    toast.error('Failed to unapply: ' + e.message)
   } finally {
     applyingId.value = null
   }
@@ -417,9 +439,16 @@ async function confirmApply() {
                 @click="copyActionItem(item)"
                 class="px-2 py-1 text-xs bg-white/5 hover:bg-white/10 rounded text-text-secondary transition-colors"
               >{{ copied === item.evaluation_id ? 'Copied!' : 'Copy' }}</button>
-              <span v-if="item.applied" class="text-xs text-text-muted">
-                {{ new Date(item.applied_at).toLocaleDateString() }}
-              </span>
+              <template v-if="item.applied">
+                <button
+                  @click="handleUnapply(item)"
+                  :disabled="applyingId === item.evaluation_id"
+                  class="px-2 py-1 text-xs bg-white/5 hover:bg-white/10 rounded text-text-secondary transition-colors disabled:opacity-50"
+                >Unapply</button>
+                <span class="text-xs text-text-muted">
+                  {{ new Date(item.applied_at).toLocaleDateString() }}
+                </span>
+              </template>
             </div>
           </div>
           <div v-if="item.top_weakness" class="text-xs text-text-muted">Weakness: {{ item.top_weakness }}</div>

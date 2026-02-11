@@ -70,10 +70,21 @@ export function clearAllCache() {
 async function request(path, options = {}) {
   const url = `${API_BASE}${path}`
   const headers = await authHeaders()
-  const res = await fetch(url, {
-    headers: { ...headers, ...options.headers },
-    ...options
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000)
+  let res
+  try {
+    res = await fetch(url, {
+      headers: { ...headers, ...options.headers },
+      signal: controller.signal,
+      ...options
+    })
+  } catch (err) {
+    clearTimeout(timeout)
+    if (err.name === 'AbortError') throw new Error('Request timed out')
+    throw err
+  }
+  clearTimeout(timeout)
   if (!res.ok) {
     if (res.status === 401) {
       // Token expired or invalid — let Clerk handle re-auth
@@ -200,6 +211,15 @@ export const getActionItems = (id) => fetchWithCache(`/agents/${id}?include=acti
 
 export const markActionItemApplied = (agentId, evalId) => {
   return request(`/agents/${agentId}?action=apply_item&eval_id=${evalId}`, {
+    method: 'PUT'
+  }).then(result => {
+    invalidateCache(`/agents/${agentId}`)
+    return result
+  })
+}
+
+export const markActionItemUnapplied = (agentId, evalId) => {
+  return request(`/agents/${agentId}?action=unapply_item&eval_id=${evalId}`, {
     method: 'PUT'
   }).then(result => {
     invalidateCache(`/agents/${agentId}`)

@@ -1,15 +1,18 @@
 // Response helpers for Netlify Functions
 
-// Allowed origins for CORS — fallback to * for dev flexibility
+// Allowed origins for CORS — reject unknown origins
 const ALLOWED_ORIGINS = [
+  'https://hirefire.dev',
   'https://dizid-agenteval.netlify.app',
   'http://localhost:5173',
-  'http://localhost:8888'
+  'http://localhost:8888',
+  'http://localhost:3000'
 ]
 
 function getCorsOrigin(origin?: string | null): string {
   if (origin && ALLOWED_ORIGINS.includes(origin)) return origin
-  return '*'
+  // Return production origin for non-matching — browser will block cross-origin requests
+  return ALLOWED_ORIGINS[0]
 }
 
 function corsHeaders(origin?: string | null): Record<string, string> {

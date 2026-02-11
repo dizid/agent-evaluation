@@ -115,6 +115,15 @@ async function handleDelete(ctx: { orgId: string; userRole: string }, id: string
     return error('Department not found', 404)
   }
 
+  // Check for agents still assigned to this department
+  const agentCount = await sql`
+    SELECT COUNT(*)::int as count FROM agents
+    WHERE department_id = ${id} AND org_id = ${ctx.orgId} AND status = 'active'
+  `
+  if (agentCount[0].count > 0) {
+    return error(`Cannot delete department with ${agentCount[0].count} active agent(s). Reassign them first.`, 409)
+  }
+
   await sql`DELETE FROM departments WHERE id = ${id}`
 
   return json({ message: 'Department deleted' })

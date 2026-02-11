@@ -36,7 +36,8 @@ export async function authenticate(req: Request): Promise<AuthContext | Response
   // Check for service key (machine-to-machine, e.g., auto-eval hook)
   const serviceKey = req.headers.get('X-Service-Key')
   if (serviceKey && process.env.SERVICE_KEY && serviceKey === process.env.SERVICE_KEY) {
-    const org = await sql`SELECT id, slug FROM organizations WHERE slug = 'dizid' LIMIT 1`
+    const serviceOrgSlug = process.env.SERVICE_ORG_SLUG || 'dizid'
+    const org = await sql`SELECT id, slug FROM organizations WHERE slug = ${serviceOrgSlug} LIMIT 1`
     if (org.length === 0) return error('Service org not found', 500)
     return {
       userId: 'a0000001-0000-0000-0000-000000000001',

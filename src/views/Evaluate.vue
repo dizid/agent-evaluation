@@ -452,6 +452,14 @@ function getKpiScoreSummary() {
             Your scores are very similar. Varied scores produce more useful evaluations.
           </span>
         </div>
+
+        <!-- Extreme score warning (inline) -->
+        <div v-if="needsJustificationScores.length > 0" class="glass-card p-3 border-score-adequate/30 flex items-center gap-2">
+          <ExclamationTriangleIcon class="w-5 h-5 text-score-adequate shrink-0" />
+          <span class="text-score-adequate text-sm">
+            Extreme scores (9+ or 3-) will be adjusted unless you provide justification in the review step.
+          </span>
+        </div>
       </section>
 
       <!-- Step 4: Role KPIs -->
@@ -482,6 +490,14 @@ function getKpiScoreSummary() {
           <ExclamationTriangleIcon class="w-5 h-5 text-score-adequate shrink-0" />
           <span class="text-score-adequate text-sm">
             Your scores are very similar. Varied scores produce more useful evaluations.
+          </span>
+        </div>
+
+        <!-- Extreme score warning (inline) -->
+        <div v-if="needsJustificationScores.length > 0" class="glass-card p-3 border-score-adequate/30 flex items-center gap-2">
+          <ExclamationTriangleIcon class="w-5 h-5 text-score-adequate shrink-0" />
+          <span class="text-score-adequate text-sm">
+            Extreme scores (9+ or 3-) will be adjusted unless you provide justification in the review step.
           </span>
         </div>
       </section>

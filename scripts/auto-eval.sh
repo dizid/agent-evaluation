@@ -40,9 +40,11 @@ fi
 
 # Require API key + service key for authenticated API calls
 if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+  echo "[auto-eval] ANTHROPIC_API_KEY not set, skipping" >&2
   exit 0
 fi
 if [ -z "${SERVICE_KEY:-}" ]; then
+  echo "[auto-eval] SERVICE_KEY not set, skipping" >&2
   exit 0
 fi
 
@@ -117,18 +119,27 @@ Be honest and calibrated. 5 = adequate, 7 = strong, 9+ = exceptional.
 PROMPT
 )
 
-# Call Claude Haiku for scoring (~$0.001 per call)
-HAIKU_RESPONSE=$(curl -sf https://api.anthropic.com/v1/messages \
-  -H "x-api-key: $ANTHROPIC_API_KEY" \
-  -H "anthropic-version: 2023-06-01" \
-  -H "content-type: application/json" \
-  -d "$(jq -n \
-    --arg prompt "$SCORING_PROMPT" \
-    '{
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
-      messages: [{ role: "user", content: $prompt }]
-    }')" 2>/dev/null || echo '{}')
+# Call Claude Haiku for scoring (~$0.001 per call) with retry
+HAIKU_RESPONSE=""
+for attempt in 1 2 3; do
+  HAIKU_RESPONSE=$(curl -sf --max-time 30 https://api.anthropic.com/v1/messages \
+    -H "x-api-key: $ANTHROPIC_API_KEY" \
+    -H "anthropic-version: 2023-06-01" \
+    -H "content-type: application/json" \
+    -d "$(jq -n \
+      --arg prompt "$SCORING_PROMPT" \
+      '{
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
+        messages: [{ role: "user", content: $prompt }]
+      }')" 2>/dev/null) && break
+  echo "[auto-eval] Haiku API attempt $attempt failed, retrying..." >&2
+  sleep $((attempt * 2))
+done
+if [ -z "$HAIKU_RESPONSE" ]; then
+  echo "[auto-eval] Haiku API failed after 3 attempts for @$AGENT_TYPE" >&2
+  exit 1
+fi
 
 # Extract the text content from Haiku's response
 # Strip markdown code fences (```json ... ```) if Haiku wraps its response
@@ -136,7 +147,8 @@ EVAL_JSON=$(echo "$HAIKU_RESPONSE" | jq -r '.content[0].text // empty' 2>/dev/nu
 EVAL_JSON=$(echo "$EVAL_JSON" | sed 's/^```json//; s/^```//; s/```$//' | tr -d '\n' | jq '.' 2>/dev/null || echo "")
 
 if [ -z "$EVAL_JSON" ]; then
-  exit 0
+  echo "[auto-eval] Failed to parse Haiku response for @$AGENT_TYPE" >&2
+  exit 1
 fi
 
 # Parse the evaluation JSON
@@ -147,7 +159,8 @@ TOP_WEAKNESS=$(echo "$EVAL_JSON" | jq -r '.top_weakness // empty' 2>/dev/null ||
 ACTION_ITEM=$(echo "$EVAL_JSON" | jq -r '.action_item // empty' 2>/dev/null || echo "")
 
 if [ -z "$SCORES" ] || [ "$SCORES" = "null" ]; then
-  exit 0
+  echo "[auto-eval] No scores found in Haiku response for @$AGENT_TYPE" >&2
+  exit 1
 fi
 
 # POST to AgentEval API (with service key auth)
@@ -171,6 +184,10 @@ curl -sf "$API_BASE/api/evaluations" \
       top_weakness: $top_weakness,
       action_item: $action_item,
       project: $project
-    }')" > /dev/null 2>&1 || true
+    }')" > /dev/null 2>&1
+  EVAL_STATUS=$?
+  if [ $EVAL_STATUS -ne 0 ]; then
+    echo "[auto-eval] Failed to POST evaluation for @$AGENT_TYPE" >&2
+  fi
 
 exit 0

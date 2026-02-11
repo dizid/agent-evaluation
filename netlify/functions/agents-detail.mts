@@ -29,6 +29,10 @@ export default async function handler(req: Request) {
       if (!authorize(ctx, 'admin')) return error('Forbidden', 403)
       return handleApplyItem(id, url, ctx.orgId)
     }
+    if (req.method === 'PUT' && url.searchParams.get('action') === 'unapply_item') {
+      if (!authorize(ctx, 'admin')) return error('Forbidden', 403)
+      return handleUnapplyItem(id, url, ctx.orgId)
+    }
     if (req.method === 'PUT') {
       if (!authorize(ctx, 'admin')) return error('Forbidden', 403)
       return handleUpdate(id, req, ctx.orgId)
@@ -161,6 +165,26 @@ async function handleApplyItem(agentId: string, url: URL, orgId: string) {
     WHERE id = ${evalId} RETURNING id, action_item, applied, applied_at
   `
   return json({ message: 'Action item marked as applied', evaluation: result[0] })
+}
+
+async function handleUnapplyItem(agentId: string, url: URL, orgId: string) {
+  const evalIdParam = url.searchParams.get('eval_id')
+  if (!evalIdParam || isNaN(Number(evalIdParam))) {
+    return error('eval_id query parameter is required and must be a number', 400)
+  }
+  const evalId = Number(evalIdParam)
+
+  const evals = await sql`
+    SELECT id, action_item, applied FROM evaluations
+    WHERE id = ${evalId} AND agent_id = ${agentId} AND org_id = ${orgId} AND action_item IS NOT NULL
+  `
+  if (evals.length === 0) return error('Evaluation not found or has no action item', 404)
+
+  const result = await sql`
+    UPDATE evaluations SET applied = false, applied_at = NULL
+    WHERE id = ${evalId} RETURNING id, action_item, applied, applied_at
+  `
+  return json({ message: 'Action item marked as unapplied', evaluation: result[0] })
 }
 
 export const config: Config = {

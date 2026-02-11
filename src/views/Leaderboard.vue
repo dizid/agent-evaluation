@@ -77,6 +77,12 @@ const podiumOrder = computed(() => {
   return [p[1], p[0], p[2]]
 })
 const podiumRankMap = [1, 0, 2] // maps display position to actual rank index
+
+// Filter dept averages to match active filter
+const filteredDeptAverages = computed(() => {
+  if (deptFilter.value === 'all') return deptAverages.value
+  return deptAverages.value.filter(d => d.department === deptFilter.value)
+})
 </script>
 
 <template>
@@ -105,9 +111,9 @@ const podiumRankMap = [1, 0, 2] // maps display position to actual rank index
     </div>
 
     <!-- Department averages bar -->
-    <div v-if="!loading && deptAverages.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+    <div v-if="!loading && filteredDeptAverages.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
       <div
-        v-for="dept in deptAverages"
+        v-for="dept in filteredDeptAverages"
         :key="dept.department"
         class="glass-card p-3 text-center"
       >

@@ -42,7 +42,7 @@ export default async function handler(req: Request) {
       return error('Request body must be valid JSON', 400)
     }
 
-    const { agent_id, scores, evaluator_type, task_description, top_strength, top_weakness, action_item, is_self_eval, project } = body
+    const { agent_id, scores, task_description, top_strength, top_weakness, action_item, is_self_eval, project } = body
     if (!agent_id || !scores) {
       return error('agent_id and scores are required', 400)
     }
@@ -51,10 +51,9 @@ export default async function handler(req: Request) {
       return error('agent_id must be 2-50 lowercase alphanumeric characters or hyphens', 400)
     }
 
-    const validEvaluatorTypes = ['self', 'auto', 'manual', 'community']
-    if (evaluator_type && !validEvaluatorTypes.includes(evaluator_type)) {
-      return error(`evaluator_type must be one of: ${validEvaluatorTypes.join(', ')}`, 400)
-    }
+    // Derive evaluator_type server-side to prevent weight spoofing
+    const isServiceKey = ctx.clerkUserId === 'service'
+    const evaluator_type = isServiceKey ? 'auto' : (is_self_eval === true ? 'self' : 'manual')
 
     const taskDescResult = validateTextField(task_description, 'task_description', 2000)
     if (!taskDescResult.valid) return error(taskDescResult.error!, 400)
