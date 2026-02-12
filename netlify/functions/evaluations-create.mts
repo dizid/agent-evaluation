@@ -52,8 +52,11 @@ export default async function handler(req: Request) {
     }
 
     // Derive evaluator_type server-side to prevent weight spoofing
+    // Service key callers can explicitly set evaluator_type (e.g. /rate command passes 'manual')
     const isServiceKey = ctx.clerkUserId === 'service'
-    const evaluator_type = isServiceKey ? 'auto' : (is_self_eval === true ? 'self' : 'manual')
+    const evaluator_type = isServiceKey
+      ? (body.evaluator_type === 'manual' ? 'manual' : 'auto')
+      : (is_self_eval === true ? 'self' : 'manual')
 
     const taskDescResult = validateTextField(task_description, 'task_description', 2000)
     if (!taskDescResult.valid) return error(taskDescResult.error!, 400)

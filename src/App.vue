@@ -108,16 +108,18 @@ const userAvatar = computed(() => user.value?.imageUrl || null)
                     </svg>
                   </button>
                   <!-- Org switcher dropdown -->
-                  <div v-if="showOrgMenu" class="hidden group-hover:block absolute top-full left-0 mt-1 w-48 glass-card rounded-lg py-1 shadow-lg z-50">
-                    <button
-                      v-for="org in userOrgs"
-                      :key="org.slug"
-                      @click="handleOrgSwitch(org.slug)"
-                      class="w-full text-left px-3 py-2 text-sm hover:bg-white/5 transition-colors"
-                      :class="org.slug === currentOrg?.slug ? 'text-accent' : 'text-text-secondary'"
-                    >
-                      {{ org.name }}
-                    </button>
+                  <div v-if="showOrgMenu" class="hidden group-hover:block absolute top-full left-0 pt-1 z-50">
+                    <div class="w-48 glass-card rounded-lg py-1 shadow-lg">
+                      <button
+                        v-for="org in userOrgs"
+                        :key="org.slug"
+                        @click="handleOrgSwitch(org.slug)"
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+                        :class="org.slug === currentOrg?.slug ? 'text-accent' : 'text-text-secondary'"
+                      >
+                        {{ org.name }}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -173,15 +175,17 @@ const userAvatar = computed(() => user.value?.imageUrl || null)
                   </div>
                 </button>
                 <!-- User dropdown -->
-                <div class="hidden group-hover:block absolute top-full right-0 mt-1 w-48 glass-card rounded-lg py-1 shadow-lg z-50">
-                  <div class="px-3 py-2 border-b border-eval-border">
-                    <p class="text-sm text-text-primary font-medium truncate">{{ userName }}</p>
-                    <p v-if="currentOrg" class="text-xs text-text-muted truncate">{{ currentOrg.name }}</p>
-                  </div>
-                  <RouterLink to="/profile" class="block px-3 py-2 text-sm text-text-secondary hover:bg-white/5 transition-colors">Profile</RouterLink>
-                  <RouterLink to="/settings" class="block px-3 py-2 text-sm text-text-secondary hover:bg-white/5 transition-colors">Settings</RouterLink>
-                  <div class="border-t border-eval-border mt-1 pt-1">
-                    <RouterLink to="/sign-in" class="block px-3 py-2 text-sm text-red-400 hover:bg-white/5 transition-colors">Sign Out</RouterLink>
+                <div class="hidden group-hover:block absolute top-full right-0 pt-1 z-50">
+                  <div class="w-48 glass-card rounded-lg py-1 shadow-lg">
+                    <div class="px-3 py-2 border-b border-eval-border">
+                      <p class="text-sm text-text-primary font-medium truncate">{{ userName }}</p>
+                      <p v-if="currentOrg" class="text-xs text-text-muted truncate">{{ currentOrg.name }}</p>
+                    </div>
+                    <RouterLink to="/profile" class="block px-3 py-2 text-sm text-text-secondary hover:bg-white/5 transition-colors">Profile</RouterLink>
+                    <RouterLink to="/settings" class="block px-3 py-2 text-sm text-text-secondary hover:bg-white/5 transition-colors">Settings</RouterLink>
+                    <div class="border-t border-eval-border mt-1 pt-1">
+                      <RouterLink to="/sign-in" class="block px-3 py-2 text-sm text-red-400 hover:bg-white/5 transition-colors">Sign Out</RouterLink>
+                    </div>
                   </div>
                 </div>
               </div>
