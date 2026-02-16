@@ -1,5 +1,5 @@
 <script setup>
-import { watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router'
 import { useAuth, useUser, SignedIn, SignedOut } from '@clerk/vue'
 import ToastContainer from './components/ui/ToastContainer.vue'
@@ -10,6 +10,19 @@ const router = useRouter()
 const route = useRoute()
 const { isLoaded, isSignedIn, getToken } = useAuth()
 const { user } = useUser()
+
+// Safety timeout: if Clerk doesn't load within 12s, show error with retry
+const clerkTimedOut = ref(false)
+const loadTimer = setTimeout(() => {
+  if (!isLoaded.value) clerkTimedOut.value = true
+}, 12000)
+watch(isLoaded, (loaded) => {
+  if (loaded) { clearTimeout(loadTimer); clerkTimedOut.value = false }
+})
+function retryLoad() {
+  clerkTimedOut.value = false
+  window.location.reload()
+}
 const {
   currentOrg,
   userOrgs,
@@ -80,8 +93,17 @@ const userAvatar = computed(() => user.value?.imageUrl || null)
     <!-- Loading screen while Clerk initializes -->
     <div v-if="!isLoaded" class="flex items-center justify-center min-h-screen">
       <div class="text-center">
-        <div class="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-        <p class="text-text-muted text-sm">Loading...</p>
+        <template v-if="clerkTimedOut">
+          <p class="text-text-secondary text-sm mb-3">Taking longer than expected...</p>
+          <button
+            @click="retryLoad"
+            class="px-4 py-2 bg-accent hover:bg-accent-hover rounded-lg text-white text-sm transition-colors"
+          >Reload Page</button>
+        </template>
+        <template v-else>
+          <div class="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <p class="text-text-muted text-sm">Loading...</p>
+        </template>
       </div>
     </div>
 
