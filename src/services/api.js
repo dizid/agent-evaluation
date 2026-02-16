@@ -69,11 +69,11 @@ export function clearAllCache() {
 
 async function request(path, options = {}) {
   const url = `${API_BASE}${path}`
-  const headers = await authHeaders()
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30000)
   let res
   try {
+    const headers = await authHeaders()
     res = await fetch(url, {
       headers: { ...headers, ...options.headers },
       signal: controller.signal,
