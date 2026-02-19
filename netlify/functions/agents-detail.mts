@@ -33,6 +33,14 @@ export default async function handler(req: Request) {
       if (!authorize(ctx, 'admin')) return error('Forbidden', 403)
       return handleUnapplyItem(id, url, ctx.orgId)
     }
+    if (req.method === 'PUT' && url.searchParams.get('action') === 'preview_edit') {
+      if (!authorize(ctx, 'admin')) return error('Forbidden', 403)
+      return handlePreviewEdit(id, url, ctx.orgId)
+    }
+    if (req.method === 'PUT' && url.searchParams.get('action') === 'apply_edit') {
+      if (!authorize(ctx, 'admin')) return error('Forbidden', 403)
+      return handleApplyEdit(id, req, url, ctx.orgId)
+    }
     if (req.method === 'PUT') {
       if (!authorize(ctx, 'admin')) return error('Forbidden', 403)
       return handleUpdate(id, req, ctx.orgId)
@@ -185,6 +193,149 @@ async function handleUnapplyItem(agentId: string, url: URL, orgId: string) {
     WHERE id = ${evalId} RETURNING id, action_item, applied, applied_at
   `
   return json({ message: 'Action item marked as unapplied', evaluation: result[0] })
+}
+
+// --- One-Click Action Apply: AI-powered persona editing ---
+
+async function callHaiku(systemPrompt: string, userPrompt: string): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured')
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4096,
+      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content: userPrompt }]
+    })
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Anthropic API ${res.status}: ${text}`)
+  }
+
+  const data = await res.json() as { content: Array<{ type: string; text?: string }> }
+  const textBlock = data.content.find((b: any) => b.type === 'text')
+  if (!textBlock?.text) throw new Error('Empty response from Anthropic API')
+
+  // Strip markdown fences if Haiku wraps the output
+  let result = textBlock.text.trim()
+  if (result.startsWith('```')) {
+    result = result.replace(/^```\w*\n?/, '').replace(/\n?```$/, '').trim()
+  }
+  return result
+}
+
+async function handlePreviewEdit(agentId: string, url: URL, orgId: string) {
+  const evalIdParam = url.searchParams.get('eval_id')
+  if (!evalIdParam || isNaN(Number(evalIdParam))) {
+    return error('eval_id query parameter is required and must be a number', 400)
+  }
+  const evalId = Number(evalIdParam)
+
+  // Fetch agent + evaluation in parallel
+  const [agents, evals] = await Promise.all([
+    sql`SELECT id, name, persona, role FROM agents WHERE id = ${agentId} AND org_id = ${orgId}`,
+    sql`SELECT id, action_item, top_weakness, applied FROM evaluations
+        WHERE id = ${evalId} AND agent_id = ${agentId} AND org_id = ${orgId} AND action_item IS NOT NULL`
+  ])
+
+  if (agents.length === 0) return error('Agent not found', 404)
+  if (evals.length === 0) return error('Evaluation not found or has no action item', 404)
+
+  const agent = agents[0]
+  const evaluation = evals[0]
+
+  if (!agent.persona) {
+    return error('Agent has no persona text to edit', 400)
+  }
+
+  const systemPrompt = `You edit AI agent persona files. Given an action item from a performance evaluation, make the minimal targeted edit to improve the agent's behavior rules.
+
+Rules:
+- Return ONLY the complete updated persona text, nothing else
+- Make the smallest change that addresses the action item
+- Preserve existing formatting, structure, and content
+- Add or modify specific behavior rules, not vague advice
+- Do not remove existing rules unless they directly conflict`
+
+  const userPrompt = `Agent: @${agent.name} (${agent.role})
+
+Current persona:
+${agent.persona}
+
+Action item: ${evaluation.action_item}${evaluation.top_weakness ? `\nWeakness: ${evaluation.top_weakness}` : ''}`
+
+  try {
+    const suggested = await callHaiku(systemPrompt, userPrompt)
+
+    return json({
+      original: agent.persona,
+      suggested,
+      action_item: evaluation.action_item,
+      top_weakness: evaluation.top_weakness,
+      eval_id: evalId
+    })
+  } catch (err: any) {
+    console.error('preview_edit error:', err)
+    return error(`Failed to generate preview: ${err.message}`, 500)
+  }
+}
+
+async function handleApplyEdit(agentId: string, req: Request, url: URL, orgId: string) {
+  const evalIdParam = url.searchParams.get('eval_id')
+  if (!evalIdParam || isNaN(Number(evalIdParam))) {
+    return error('eval_id query parameter is required and must be a number', 400)
+  }
+  const evalId = Number(evalIdParam)
+
+  let body: any
+  try {
+    body = await req.json()
+  } catch {
+    return error('Request body must be valid JSON', 400)
+  }
+
+  const { confirmed_persona } = body
+  if (!confirmed_persona || typeof confirmed_persona !== 'string') {
+    return error('confirmed_persona is required and must be a string', 400)
+  }
+  if (confirmed_persona.length > 10000) {
+    return error('confirmed_persona must be max 10000 characters', 400)
+  }
+
+  // Verify agent + eval exist
+  const [agents, evals] = await Promise.all([
+    sql`SELECT id, name FROM agents WHERE id = ${agentId} AND org_id = ${orgId}`,
+    sql`SELECT id, action_item FROM evaluations
+        WHERE id = ${evalId} AND agent_id = ${agentId} AND org_id = ${orgId} AND action_item IS NOT NULL`
+  ])
+
+  if (agents.length === 0) return error('Agent not found', 404)
+  if (evals.length === 0) return error('Evaluation not found or has no action item', 404)
+
+  const sanitized = stripHtml(confirmed_persona)
+
+  // Update persona + mark eval as applied in parallel
+  const [agentResult] = await Promise.all([
+    sql`UPDATE agents SET persona = ${sanitized}, updated_at = NOW()
+        WHERE id = ${agentId} AND org_id = ${orgId} RETURNING *`,
+    sql`UPDATE evaluations SET applied = true, applied_at = NOW()
+        WHERE id = ${evalId}`
+  ])
+
+  return json({
+    agent: agentResult[0],
+    evaluation_id: evalId,
+    message: 'Persona updated and action item marked as applied. Run /deploy-agents to sync agent files.'
+  })
 }
 
 export const config: Config = {

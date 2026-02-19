@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
-import { getAgent, updateAgent, getActionItems, markActionItemApplied, markActionItemUnapplied, getDepartments } from '@/services/api'
+import { getAgent, updateAgent, getActionItems, markActionItemApplied, markActionItemUnapplied, getDepartments, previewActionEdit, applyActionEdit } from '@/services/api'
 import { useToast } from '@/composables/useToast'
 import ScoreBadge from '@/components/ui/ScoreBadge.vue'
 import DeptBadge from '@/components/ui/DeptBadge.vue'
@@ -242,6 +242,65 @@ async function handleUnapply(item) {
     applyingId.value = null
   }
 }
+
+// --- One-Click Action Apply (AI preview + edit) ---
+const previewingId = ref(null)
+const editPreview = ref(null)
+const applyingEdit = ref(false)
+
+async function handlePreviewEdit(item) {
+  previewingId.value = item.evaluation_id
+  editPreview.value = null
+  try {
+    const data = await previewActionEdit(route.params.id, item.evaluation_id)
+    editPreview.value = {
+      original: data.original,
+      suggested: data.suggested,
+      edited: data.suggested,
+      actionItem: data.action_item,
+      topWeakness: data.top_weakness,
+      evalId: data.eval_id
+    }
+  } catch (e) {
+    toast.error('Failed to generate preview: ' + e.message)
+    previewingId.value = null
+  }
+}
+
+function cancelPreview() {
+  editPreview.value = null
+  previewingId.value = null
+}
+
+async function confirmApplyEdit() {
+  if (!editPreview.value) return
+  applyingEdit.value = true
+  try {
+    await applyActionEdit(route.params.id, editPreview.value.evalId, editPreview.value.edited)
+
+    // Update local persona in form
+    form.persona = editPreview.value.edited
+    initialSnapshot.value = JSON.stringify({
+      name: form.name, department: form.department, role: form.role,
+      persona: form.persona, model: form.model, kpi_definitions: form.kpi_definitions
+    })
+
+    // Mark the action item as applied locally
+    const item = actionItems.value.find(i => i.evaluation_id === editPreview.value.evalId)
+    if (item) {
+      item.applied = true
+      item.applied_at = new Date().toISOString()
+    }
+
+    toast.success('Persona updated! Run /deploy-agents to sync agent files.')
+    editPreview.value = null
+    previewingId.value = null
+  } catch (e) {
+    toast.error('Failed to apply edit: ' + e.message)
+  } finally {
+    applyingEdit.value = false
+  }
+}
 </script>
 
 <template>
@@ -396,11 +455,10 @@ async function handleUnapply(item) {
       <div v-if="actionItems.length > 0" class="glass-card p-4 space-y-3">
         <h2 class="text-lg font-semibold text-text-primary">Improvement Suggestions</h2>
         <p class="text-sm text-text-muted">
-          Action items from evaluations. Mark as applied after updating the agent's behavior rules
-          via <code class="text-accent font-mono text-xs">/apply-action-items</code>.
+          Click <strong>Preview Edit</strong> to generate an AI-suggested persona improvement, or mark as applied manually.
         </p>
 
-        <!-- Confirmation dialog -->
+        <!-- Confirmation dialog (manual apply) -->
         <div v-if="confirmItem" class="bg-accent/10 border border-accent/30 rounded-lg p-3 space-y-2">
           <p class="text-sm text-text-primary">Mark this action item as applied?</p>
           <p class="text-xs text-text-secondary italic">"{{ confirmItem.action_item }}"</p>
@@ -430,10 +488,16 @@ async function handleUnapply(item) {
             <div class="shrink-0 flex gap-1">
               <button
                 v-if="!item.applied"
+                @click="handlePreviewEdit(item)"
+                :disabled="previewingId === item.evaluation_id"
+                class="px-2 py-1 text-xs bg-emerald-500/20 hover:bg-emerald-500/30 rounded text-emerald-400 transition-colors disabled:opacity-50"
+              >{{ previewingId === item.evaluation_id ? 'Generating...' : 'Preview Edit' }}</button>
+              <button
+                v-if="!item.applied"
                 @click="startApply(item)"
                 :disabled="applyingId === item.evaluation_id"
                 class="px-2 py-1 text-xs bg-accent/20 hover:bg-accent/30 rounded text-accent transition-colors disabled:opacity-50"
-              >{{ applyingId === item.evaluation_id ? 'Applying...' : 'Apply' }}</button>
+              >{{ applyingId === item.evaluation_id ? '...' : 'Mark Applied' }}</button>
               <button
                 v-if="!item.applied"
                 @click="copyActionItem(item)"
@@ -457,6 +521,51 @@ async function handleUnapply(item) {
           </div>
         </div>
       </div>
+
+      <!-- Preview Edit Modal -->
+      <Teleport to="body">
+        <div v-if="editPreview" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="cancelPreview"></div>
+          <div class="relative bg-eval-card border border-eval-border rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+            <!-- Modal header -->
+            <div class="p-4 border-b border-eval-border flex items-center justify-between">
+              <div>
+                <h3 class="text-lg font-semibold text-text-primary">Preview Persona Edit</h3>
+                <p class="text-xs text-text-muted mt-0.5">{{ editPreview.actionItem }}</p>
+              </div>
+              <button @click="cancelPreview" class="text-text-muted hover:text-text-primary transition-colors">
+                <XMarkIcon class="w-5 h-5" />
+              </button>
+            </div>
+
+            <!-- Modal body -->
+            <div class="p-4 overflow-y-auto flex-1 space-y-3">
+              <label class="block text-sm text-text-secondary">Suggested persona (editable):</label>
+              <textarea
+                v-model="editPreview.edited"
+                rows="16"
+                class="w-full bg-eval-surface border border-eval-border rounded-lg px-3 py-2 text-text-primary text-sm font-mono focus:outline-none focus:border-accent transition-colors"
+              ></textarea>
+              <p class="text-xs text-text-muted">
+                You can edit the suggested text before applying. After applying, run <code class="text-accent font-mono">/deploy-agents</code> to sync agent files.
+              </p>
+            </div>
+
+            <!-- Modal footer -->
+            <div class="p-4 border-t border-eval-border flex items-center justify-end gap-3">
+              <button
+                @click="cancelPreview"
+                class="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-text-secondary text-sm transition-colors"
+              >Cancel</button>
+              <button
+                @click="confirmApplyEdit"
+                :disabled="applyingEdit"
+                class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white text-sm font-semibold transition-colors disabled:opacity-50"
+              >{{ applyingEdit ? 'Applying...' : 'Apply Edit' }}</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
     </template>
   </div>
 </template>

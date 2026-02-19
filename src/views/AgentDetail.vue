@@ -33,6 +33,29 @@ const evaluations = ref([])
 const loading = ref(true)
 const error = ref(null)
 const showPersona = ref(false)
+const showReasoning = ref(false)
+const selectedCriteria = ref([])
+
+// All 8 universal criteria for the chart selector
+const CRITERIA_OPTIONS = [
+  { key: 'task_completion', label: 'Task Completion', color: '#22c55e' },
+  { key: 'accuracy', label: 'Accuracy', color: '#3b82f6' },
+  { key: 'efficiency', label: 'Efficiency', color: '#f59e0b' },
+  { key: 'judgment', label: 'Judgment', color: '#a855f7' },
+  { key: 'communication', label: 'Communication', color: '#06b6d4' },
+  { key: 'domain_expertise', label: 'Domain Expertise', color: '#ec4899' },
+  { key: 'autonomy', label: 'Autonomy', color: '#f97316' },
+  { key: 'safety', label: 'Safety', color: '#ef4444' }
+]
+
+function toggleCriterion(key) {
+  const idx = selectedCriteria.value.indexOf(key)
+  if (idx >= 0) {
+    selectedCriteria.value = selectedCriteria.value.filter(k => k !== key)
+  } else {
+    selectedCriteria.value = [...selectedCriteria.value, key]
+  }
+}
 
 // Handle success redirect from evaluation submission
 if (route.query.submitted === '1') {
@@ -77,6 +100,12 @@ const latestAction = computed(() => {
   if (latestEvaluation.value?.action_item) return latestEvaluation.value.action_item
   if (evaluations.value.length === 0) return null
   return evaluations.value[0]?.action_item || null
+})
+
+const latestReasoning = computed(() => {
+  if (latestEvaluation.value?.reasoning) return latestEvaluation.value.reasoning
+  if (evaluations.value.length === 0) return null
+  return evaluations.value[0]?.reasoning || null
 })
 
 const kpiNames = computed(() => {
@@ -298,11 +327,28 @@ const personaSections = computed(() => {
 
       <!-- Score trend chart -->
       <section v-if="showChart" class="glass-card p-5 mb-6">
-        <h2 class="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
+        <h2 class="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
           <ChartBarIcon class="w-4 h-4 text-accent" />
           Score Trend
         </h2>
-        <TrendChart :evaluations="evaluations" :height="200" />
+
+        <!-- Criterion selector chips -->
+        <div class="flex flex-wrap gap-1.5 mb-4">
+          <button
+            v-for="c in CRITERIA_OPTIONS"
+            :key="c.key"
+            @click="toggleCriterion(c.key)"
+            class="px-2.5 py-1 text-[11px] rounded-full border transition-all duration-150"
+            :class="selectedCriteria.includes(c.key)
+              ? 'border-transparent text-white font-medium'
+              : 'border-eval-border text-text-muted hover:text-text-secondary hover:border-eval-card'"
+            :style="selectedCriteria.includes(c.key) ? { backgroundColor: c.color + 'cc' } : {}"
+          >
+            {{ c.label }}
+          </button>
+        </div>
+
+        <TrendChart :evaluations="evaluations" :criteria="selectedCriteria" :height="220" />
       </section>
 
       <!-- Score Breakdown -->
@@ -310,6 +356,22 @@ const personaSections = computed(() => {
         <h2 class="text-sm font-semibold text-text-primary mb-3">Latest Score Breakdown</h2>
         <div class="glass-card p-5">
           <ScoreBreakdown :scores="latestScores" :kpi-names="kpiNames" />
+
+          <!-- G-Eval Reasoning (collapsible) -->
+          <div v-if="latestReasoning" class="mt-4 pt-4 border-t border-eval-border">
+            <button
+              @click="showReasoning = !showReasoning"
+              :aria-expanded="showReasoning"
+              class="flex items-center gap-1.5 text-text-muted text-xs hover:text-text-secondary transition-colors"
+            >
+              <ChevronDownIcon
+                class="w-3.5 h-3.5 transition-transform duration-200"
+                :class="{ 'rotate-180': showReasoning }"
+              />
+              {{ showReasoning ? 'Hide AI reasoning' : 'Show AI reasoning' }}
+            </button>
+            <pre v-if="showReasoning" class="mt-3 text-text-secondary text-xs leading-relaxed whitespace-pre-wrap font-sans bg-eval-surface rounded-lg p-4">{{ latestReasoning }}</pre>
+          </div>
         </div>
       </section>
 

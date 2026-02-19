@@ -1,6 +1,9 @@
 <script setup>
 import { SignIn } from '@clerk/vue'
 import { RouterLink } from 'vue-router'
+import { clerkDarkAppearance } from '@/utils/clerk-theme'
+
+const clerkAppearance = clerkDarkAppearance
 </script>
 
 <template>
@@ -53,24 +56,7 @@ import { RouterLink } from 'vue-router'
             :routing="'path'"
             :path="'/sign-in'"
             :sign-up-url="'/sign-up'"
-            :appearance="{
-              variables: {
-                colorPrimary: '#7c3aed',
-                colorBackground: 'transparent',
-                colorInputBackground: 'rgba(255, 255, 255, 0.05)',
-                colorInputText: '#ffffff',
-                borderRadius: '0.75rem'
-              },
-              elements: {
-                card: 'bg-transparent shadow-none',
-                headerTitle: 'text-text-primary',
-                headerSubtitle: 'text-text-secondary',
-                formFieldLabel: 'text-text-secondary',
-                footerActionLink: 'text-accent hover:text-accent-hover',
-                dividerLine: 'bg-eval-border',
-                dividerText: 'text-text-muted'
-              }
-            }"
+            :appearance="clerkAppearance"
           />
         </div>
       </div>

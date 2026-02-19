@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useAuth } from '@clerk/vue'
 import { getAgents, getLeaderboard } from '@/services/api'
 import { getRatingLabel, getScoreColor } from '@/services/scoring'
 import ScoreBadge from '@/components/ui/ScoreBadge.vue'
@@ -43,9 +44,16 @@ const displayAvg = ref(0)
 const observedSections = ref(new Set())
 let observer = null
 
-// --- Data fetching ---
+const { isSignedIn } = useAuth()
+
+// --- Data fetching (only when signed in — these are auth-required endpoints) ---
 onMounted(async () => {
   try {
+    if (!isSignedIn.value) {
+      // Not signed in — skip API calls, show static content only
+      loading.value = false
+      return
+    }
     const [leaderboardData, agentsData] = await Promise.all([
       getLeaderboard(),
       getAgents()

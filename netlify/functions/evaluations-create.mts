@@ -42,7 +42,7 @@ export default async function handler(req: Request) {
       return error('Request body must be valid JSON', 400)
     }
 
-    const { agent_id, scores, task_description, top_strength, top_weakness, action_item, is_self_eval, project } = body
+    const { agent_id, scores, task_description, top_strength, top_weakness, action_item, is_self_eval, project, reasoning } = body
     if (!agent_id || !scores) {
       return error('agent_id and scores are required', 400)
     }
@@ -69,6 +69,9 @@ export default async function handler(req: Request) {
 
     const topWeaknessResult = validateTextField(top_weakness, 'top_weakness', 500)
     if (!topWeaknessResult.valid) return error(topWeaknessResult.error!, 400)
+
+    const reasoningResult = validateTextField(reasoning, 'reasoning', 5000)
+    if (!reasoningResult.valid) return error(reasoningResult.error!, 400)
 
     let sanitizedProject: string | null = null
     if (project !== undefined && project !== null && project !== '') {
@@ -130,7 +133,7 @@ export default async function handler(req: Request) {
         agent_id, org_id, evaluator_user_id, evaluator_type, task_description, scores,
         universal_avg, role_avg, overall, rating_label,
         top_strength, top_weakness, action_item,
-        is_self_eval, weight, project
+        is_self_eval, weight, project, reasoning
       ) VALUES (
         ${agent_id}, ${ctx.orgId}, ${ctx.userId},
         ${evaluator_type || 'manual'},
@@ -139,7 +142,7 @@ export default async function handler(req: Request) {
         ${universalAvg}, ${roleAvg}, ${overall}, ${ratingLabel},
         ${topStrengthResult.sanitized}, ${topWeaknessResult.sanitized},
         ${actionItemResult.sanitized},
-        ${selfEval}, ${weight}, ${sanitizedProject}
+        ${selfEval}, ${weight}, ${sanitizedProject}, ${reasoningResult.sanitized}
       )
       RETURNING *
     `

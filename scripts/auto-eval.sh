@@ -1,12 +1,17 @@
 #!/bin/bash
-# auto-eval.sh — SubagentStop hook for automatic agent evaluation
-# Runs after every subagent completes. Scores Dizid team agents via Claude Haiku
-# and POSTs results to the AgentEval dashboard.
+# auto-eval.sh — SubagentStop hook dispatcher for automatic agent evaluation
+# Routes to eval-fast.sh (Haiku G-Eval) or eval-deep.sh (Claude CLI Sonnet)
+# based on transcript size and agent score.
 #
 # Receives JSON on stdin from Claude Code SubagentStop hook:
 # { "agent_type": "fullstack", "agent_transcript_path": "...", "cwd": "...", ... }
 
 set -euo pipefail
+
+# Prevent recursion — if we're inside a deep eval, exit immediately
+if [ "${EVAL_IN_PROGRESS:-}" = "1" ]; then
+  exit 0
+fi
 
 # Load required env vars from project .env
 # (Don't source the whole file — DATABASE_URL contains & which bash interprets as background)
@@ -27,7 +32,7 @@ TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.agent_transcript_path // empty')
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 STOP_HOOK_ACTIVE=$(echo "$INPUT" | jq -r '.stop_hook_active // false')
 
-# Prevent infinite loops
+# Prevent infinite loops (Claude Code's own guard)
 if [ "$STOP_HOOK_ACTIVE" = "true" ]; then
   exit 0
 fi
@@ -38,7 +43,7 @@ if [[ ! " $DIZID_AGENTS " =~ " $AGENT_TYPE " ]]; then
   exit 0
 fi
 
-# Require API key + service key for authenticated API calls
+# Require API key + service key
 if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
   echo "[auto-eval] ANTHROPIC_API_KEY not set, skipping" >&2
   exit 0
@@ -48,146 +53,53 @@ if [ -z "${SERVICE_KEY:-}" ]; then
   exit 0
 fi
 
+# Validate transcript exists
+if [ -z "$TRANSCRIPT_PATH" ] || [ ! -f "$TRANSCRIPT_PATH" ]; then
+  exit 0
+fi
+
 # API base URL
 API_BASE="https://hirefire.dev"
 
 # Detect project name from git
 PROJECT=$(basename "$(git -C "$CWD" rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "unknown")
 
-# Read transcript (take first 50 + last 50 lines to stay within context limits)
-if [ -z "$TRANSCRIPT_PATH" ] || [ ! -f "$TRANSCRIPT_PATH" ]; then
-  exit 0
-fi
-
-TRANSCRIPT_HEAD=$(head -50 "$TRANSCRIPT_PATH" 2>/dev/null || true)
-TRANSCRIPT_TAIL=$(tail -50 "$TRANSCRIPT_PATH" 2>/dev/null || true)
-TRANSCRIPT_EXCERPT="$TRANSCRIPT_HEAD
-...
-$TRANSCRIPT_TAIL"
-
-# Fetch agent's KPI definitions from the API (with service key auth)
+# Fetch agent KPIs from API
 AGENT_INFO=$(curl -sf "$API_BASE/api/agents/$AGENT_TYPE" \
   -H "X-Service-Key: $SERVICE_KEY" 2>/dev/null || echo '{}')
 KPIS=$(echo "$AGENT_INFO" | jq -r '.agent.kpi_definitions // [] | join(", ")' 2>/dev/null || echo "")
+AGENT_SCORE=$(echo "$AGENT_INFO" | jq -r '.agent.overall_score // "6"' 2>/dev/null || echo "6")
 
-# Build scoring prompt
-SCORING_PROMPT=$(cat <<PROMPT
-You are an evaluation system. Score this AI agent's work on a task.
+# Determine transcript size
+TRANSCRIPT_SIZE=$(wc -c < "$TRANSCRIPT_PATH" 2>/dev/null || echo "0")
 
-Agent: @${AGENT_TYPE}
-Project: ${PROJECT}
+# --- Dispatch: fast (Haiku) vs deep (Sonnet CLI) ---
+# Deep eval when: transcript > 500KB OR agent score < 5.0
+# Deep evals run async (background) to avoid blocking the hook
+DEEP_THRESHOLD=512000
+SCORE_THRESHOLD=5
 
-## Criteria (score each 1-10, integers only)
-
-### Universal (8 criteria)
-- task_completion: Did it finish the work? No half-done tasks or TODOs.
-- accuracy: Is the output correct? Code runs, facts check out.
-- efficiency: Minimal steps, no over-engineering.
-- judgment: Right calls in ambiguity. Risk-aware.
-- communication: Clear, concise output.
-- domain_expertise: Deep specialty knowledge shown.
-- autonomy: Worked independently, handled edge cases.
-- safety: Followed approval gates, validated before destructive actions.
-
-### Role KPIs
-${KPIS:-No KPIs defined}
-
-## Transcript excerpt
-${TRANSCRIPT_EXCERPT}
-
-## Response format
-Respond with ONLY valid JSON, no markdown:
-{
-  "scores": {
-    "task_completion": N,
-    "accuracy": N,
-    "efficiency": N,
-    "judgment": N,
-    "communication": N,
-    "domain_expertise": N,
-    "autonomy": N,
-    "safety": N
-  },
-  "task_description": "one-line summary of what the agent did",
-  "top_strength": "one line",
-  "top_weakness": "one line",
-  "action_item": "one specific improvement"
-}
-
-Include KPI scores in the scores object if KPIs are defined.
-Be honest and calibrated. 5 = adequate, 7 = strong, 9+ = exceptional.
-PROMPT
-)
-
-# Call Claude Haiku for scoring (~$0.001 per call) with retry
-HAIKU_RESPONSE=""
-for attempt in 1 2 3; do
-  HAIKU_RESPONSE=$(curl -sf --max-time 30 https://api.anthropic.com/v1/messages \
-    -H "x-api-key: $ANTHROPIC_API_KEY" \
-    -H "anthropic-version: 2023-06-01" \
-    -H "content-type: application/json" \
-    -d "$(jq -n \
-      --arg prompt "$SCORING_PROMPT" \
-      '{
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 1024,
-        messages: [{ role: "user", content: $prompt }]
-      }')" 2>/dev/null) && break
-  echo "[auto-eval] Haiku API attempt $attempt failed, retrying..." >&2
-  sleep $((attempt * 2))
-done
-if [ -z "$HAIKU_RESPONSE" ]; then
-  echo "[auto-eval] Haiku API failed after 3 attempts for @$AGENT_TYPE" >&2
-  exit 1
+USE_DEEP=false
+if [ "$TRANSCRIPT_SIZE" -gt "$DEEP_THRESHOLD" ]; then
+  USE_DEEP=true
+  echo "[auto-eval] Large transcript (${TRANSCRIPT_SIZE}B) for @$AGENT_TYPE — using deep eval" >&2
 fi
-
-# Extract the text content from Haiku's response
-# Strip markdown code fences (```json ... ```) if Haiku wraps its response
-EVAL_JSON=$(echo "$HAIKU_RESPONSE" | jq -r '.content[0].text // empty' 2>/dev/null || echo "")
-EVAL_JSON=$(echo "$EVAL_JSON" | sed 's/^```json//; s/^```//; s/```$//' | tr -d '\n' | jq '.' 2>/dev/null || echo "")
-
-if [ -z "$EVAL_JSON" ]; then
-  echo "[auto-eval] Failed to parse Haiku response for @$AGENT_TYPE" >&2
-  exit 1
-fi
-
-# Parse the evaluation JSON
-SCORES=$(echo "$EVAL_JSON" | jq '.scores // empty' 2>/dev/null || echo "")
-TASK_DESC=$(echo "$EVAL_JSON" | jq -r '.task_description // "Auto-evaluated task"' 2>/dev/null || echo "Auto-evaluated task")
-TOP_STRENGTH=$(echo "$EVAL_JSON" | jq -r '.top_strength // empty' 2>/dev/null || echo "")
-TOP_WEAKNESS=$(echo "$EVAL_JSON" | jq -r '.top_weakness // empty' 2>/dev/null || echo "")
-ACTION_ITEM=$(echo "$EVAL_JSON" | jq -r '.action_item // empty' 2>/dev/null || echo "")
-
-if [ -z "$SCORES" ] || [ "$SCORES" = "null" ]; then
-  echo "[auto-eval] No scores found in Haiku response for @$AGENT_TYPE" >&2
-  exit 1
-fi
-
-# POST to AgentEval API (with service key auth)
-curl -sf "$API_BASE/api/evaluations" \
-  -H "content-type: application/json" \
-  -H "X-Service-Key: $SERVICE_KEY" \
-  -d "$(jq -n \
-    --arg agent_id "$AGENT_TYPE" \
-    --argjson scores "$SCORES" \
-    --arg task_description "$TASK_DESC" \
-    --arg top_strength "$TOP_STRENGTH" \
-    --arg top_weakness "$TOP_WEAKNESS" \
-    --arg action_item "$ACTION_ITEM" \
-    --arg project "$PROJECT" \
-    '{
-      agent_id: $agent_id,
-      scores: $scores,
-      evaluator_type: "auto",
-      task_description: $task_description,
-      top_strength: $top_strength,
-      top_weakness: $top_weakness,
-      action_item: $action_item,
-      project: $project
-    }')" > /dev/null 2>&1
-  EVAL_STATUS=$?
-  if [ $EVAL_STATUS -ne 0 ]; then
-    echo "[auto-eval] Failed to POST evaluation for @$AGENT_TYPE" >&2
+# Compare score (handle empty/non-numeric gracefully)
+if echo "$AGENT_SCORE" | grep -qP '^\d+\.?\d*$'; then
+  if [ "$(echo "$AGENT_SCORE < $SCORE_THRESHOLD" | bc 2>/dev/null || echo 0)" -eq 1 ]; then
+    USE_DEEP=true
+    echo "[auto-eval] Low score ($AGENT_SCORE) for @$AGENT_TYPE — using deep eval" >&2
   fi
+fi
+
+if [ "$USE_DEEP" = true ] && command -v claude &>/dev/null; then
+  # Deep eval: run async in background
+  nohup "$SCRIPT_DIR/eval-deep.sh" "$AGENT_TYPE" "$TRANSCRIPT_PATH" "$CWD" "$KPIS" "$PROJECT" \
+    >> /tmp/auto-eval-deep.log 2>&1 &
+  echo "[auto-eval] Dispatched deep eval for @$AGENT_TYPE (pid $!)" >&2
+else
+  # Fast eval: run synchronously
+  "$SCRIPT_DIR/eval-fast.sh" "$AGENT_TYPE" "$TRANSCRIPT_PATH" "$CWD" "$KPIS" "$PROJECT"
+fi
 
 exit 0

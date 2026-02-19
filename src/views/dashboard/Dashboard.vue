@@ -3,56 +3,41 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrgContext } from '@/composables/useOrgContext.js'
 import { useToast } from '@/composables/useToast.js'
-import { getAgents, getLeaderboard, getCategories } from '@/services/api.js'
+import { getDashboardStats } from '@/services/api.js'
 import ScoreBadge from '@/components/ui/ScoreBadge.vue'
 import DeptBadge from '@/components/ui/DeptBadge.vue'
+import {
+  ExclamationTriangleIcon,
+  ShieldExclamationIcon,
+  ClockIcon,
+  XMarkIcon
+} from '@heroicons/vue/24/outline'
 
 const router = useRouter()
 const { currentOrg } = useOrgContext()
 const toast = useToast()
 
 const loading = ref(true)
-const agents = ref([])
-const leaderboard = ref([])
-const categories = ref([])
+const dashData = ref(null)
+const dismissedAlerts = ref(new Set())
 
-const stats = computed(() => {
-  const activeAgents = agents.value.filter(a => a.status === 'active')
-  const totalEvaluations = activeAgents.reduce((sum, a) => sum + (a.eval_count || 0), 0)
+const stats = computed(() => dashData.value?.stats || {})
+const deptPerformance = computed(() => dashData.value?.department_performance || [])
+const topAgents = computed(() => dashData.value?.top_agents || [])
+const pendingActions = computed(() => dashData.value?.pending_action_items || 0)
 
-  // Calculate average score from leaderboard dept averages
-  const avgScore = leaderboard.value.length > 0
-    ? leaderboard.value.reduce((sum, item) => sum + Number(item.overall_score), 0) / leaderboard.value.length
-    : 0
-
-  // Top performer
-  const topPerformer = leaderboard.value[0] || null
-
-  return {
-    activeCount: activeAgents.length,
-    avgScore: avgScore.toFixed(1),
-    totalEvaluations,
-    topPerformer
-  }
+const alerts = computed(() => {
+  const raw = dashData.value?.alerts || []
+  return raw.filter(a => !dismissedAlerts.value.has(a.agent_id + a.type))
 })
 
-const deptStats = computed(() => {
-  return categories.value.map(cat => {
-    const deptAgents = agents.value.filter(a => a.department === cat.department && a.status === 'active')
-    const avgScore = deptAgents.length > 0
-      ? deptAgents.reduce((sum, a) => sum + Number(a.overall_score || 0), 0) / deptAgents.length
-      : 0
+const criticalAlerts = computed(() => alerts.value.filter(a => a.severity === 'critical'))
+const warningAlerts = computed(() => alerts.value.filter(a => a.severity === 'warning'))
+const infoAlerts = computed(() => alerts.value.filter(a => a.severity === 'info'))
 
-    return {
-      name: cat.department,
-      count: deptAgents.length,
-      avgScore: avgScore.toFixed(1),
-      color: getDeptColor(cat.department)
-    }
-  }).filter(d => d.count > 0)
-})
-
-const topAgents = computed(() => leaderboard.value.slice(0, 5))
+function dismissAlert(alert) {
+  dismissedAlerts.value = new Set([...dismissedAlerts.value, alert.agent_id + alert.type])
+}
 
 function getDeptColor(dept) {
   const colors = {
@@ -65,18 +50,16 @@ function getDeptColor(dept) {
   return colors[dept] || '#8b5cf6'
 }
 
+function alertIcon(type) {
+  if (type === 'low_safety') return ShieldExclamationIcon
+  if (type === 'stale') return ClockIcon
+  return ExclamationTriangleIcon
+}
+
 async function loadData() {
   loading.value = true
   try {
-    const [agentsRes, leaderboardRes, categoriesRes] = await Promise.all([
-      getAgents(),
-      getLeaderboard(),
-      getCategories()
-    ])
-
-    agents.value = agentsRes.agents || []
-    leaderboard.value = leaderboardRes.agents || []
-    categories.value = categoriesRes.categories || []
+    dashData.value = await getDashboardStats()
   } catch (err) {
     toast.error('Failed to load dashboard data')
     console.error(err)
@@ -107,35 +90,91 @@ onMounted(loadData)
 
     <!-- Content -->
     <div v-else class="space-y-6">
+      <!-- Alert banners -->
+      <div v-if="alerts.length > 0" class="space-y-2">
+        <!-- Critical alerts (red) -->
+        <div
+          v-for="alert in criticalAlerts"
+          :key="alert.agent_id + alert.type"
+          class="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20"
+        >
+          <component :is="alertIcon(alert.type)" class="w-5 h-5 text-red-400 shrink-0" />
+          <div class="flex-1 min-w-0">
+            <span
+              class="text-red-300 font-medium text-sm cursor-pointer hover:underline"
+              @click="router.push(`/agent/${alert.agent_id}`)"
+            >{{ alert.agent_name }}</span>
+            <span class="text-red-400/70 text-sm ml-2">{{ alert.message }}</span>
+          </div>
+          <button @click="dismissAlert(alert)" class="text-red-400/50 hover:text-red-400 shrink-0">
+            <XMarkIcon class="w-4 h-4" />
+          </button>
+        </div>
+
+        <!-- Warning alerts (amber) -->
+        <div
+          v-for="alert in warningAlerts"
+          :key="alert.agent_id + alert.type"
+          class="flex items-center gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20"
+        >
+          <component :is="alertIcon(alert.type)" class="w-5 h-5 text-amber-400 shrink-0" />
+          <div class="flex-1 min-w-0">
+            <span
+              class="text-amber-300 font-medium text-sm cursor-pointer hover:underline"
+              @click="router.push(`/agent/${alert.agent_id}`)"
+            >{{ alert.agent_name }}</span>
+            <span class="text-amber-400/70 text-sm ml-2">{{ alert.message }}</span>
+          </div>
+          <button @click="dismissAlert(alert)" class="text-amber-400/50 hover:text-amber-400 shrink-0">
+            <XMarkIcon class="w-4 h-4" />
+          </button>
+        </div>
+
+        <!-- Info alerts (blue/muted) -->
+        <div
+          v-for="alert in infoAlerts"
+          :key="alert.agent_id + alert.type"
+          class="flex items-center gap-3 p-3 rounded-lg bg-sky-500/10 border border-sky-500/20"
+        >
+          <component :is="alertIcon(alert.type)" class="w-5 h-5 text-sky-400 shrink-0" />
+          <div class="flex-1 min-w-0">
+            <span
+              class="text-sky-300 font-medium text-sm cursor-pointer hover:underline"
+              @click="router.push(`/agent/${alert.agent_id}`)"
+            >{{ alert.agent_name }}</span>
+            <span class="text-sky-400/70 text-sm ml-2">{{ alert.message }}</span>
+          </div>
+          <button @click="dismissAlert(alert)" class="text-sky-400/50 hover:text-sky-400 shrink-0">
+            <XMarkIcon class="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
       <!-- Stat cards -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="glass-card p-6">
           <div class="text-text-muted text-sm mb-2">Active Agents</div>
-          <div class="text-3xl font-bold text-text-primary">{{ stats.activeCount }}</div>
+          <div class="text-3xl font-bold text-text-primary">{{ stats.active_agents || 0 }}</div>
         </div>
 
         <div class="glass-card p-6">
           <div class="text-text-muted text-sm mb-2">Average Score</div>
           <div class="flex items-center space-x-2">
-            <div class="text-3xl font-bold text-text-primary">{{ stats.avgScore }}</div>
-            <ScoreBadge :score="Number(stats.avgScore)" size="sm" />
+            <div class="text-3xl font-bold text-text-primary">{{ stats.avg_score || '—' }}</div>
+            <ScoreBadge v-if="stats.avg_score" :score="Number(stats.avg_score)" size="sm" />
           </div>
         </div>
 
         <div class="glass-card p-6">
           <div class="text-text-muted text-sm mb-2">Total Evaluations</div>
-          <div class="text-3xl font-bold text-text-primary">{{ stats.totalEvaluations }}</div>
+          <div class="text-3xl font-bold text-text-primary">{{ stats.total_evaluations || 0 }}</div>
         </div>
 
         <div class="glass-card p-6">
-          <div class="text-text-muted text-sm mb-2">Top Performer</div>
-          <div v-if="stats.topPerformer" class="flex items-center justify-between">
-            <div class="text-lg font-semibold text-text-primary truncate mr-2">
-              {{ stats.topPerformer.name }}
-            </div>
-            <ScoreBadge :score="Number(stats.topPerformer.overall_score)" size="sm" />
+          <div class="text-text-muted text-sm mb-2">Pending Actions</div>
+          <div class="text-3xl font-bold" :class="pendingActions > 0 ? 'text-accent' : 'text-text-primary'">
+            {{ pendingActions }}
           </div>
-          <div v-else class="text-text-muted text-sm">No data yet</div>
         </div>
       </div>
 
@@ -144,24 +183,26 @@ onMounted(loadData)
         <h2 class="text-xl font-bold text-text-primary mb-4">Departments</h2>
         <div class="space-y-4">
           <div
-            v-for="dept in deptStats"
-            :key="dept.name"
+            v-for="dept in deptPerformance"
+            :key="dept.department"
             class="flex items-center space-x-4"
           >
             <div class="flex-1">
               <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center space-x-2">
-                  <DeptBadge :department="dept.name" />
-                  <span class="text-text-muted text-sm">{{ dept.count }} agents</span>
+                  <DeptBadge :department="dept.department" />
+                  <span class="text-text-muted text-sm">{{ dept.agent_count }} agents</span>
+                  <span v-if="dept.trending_up > 0" class="text-score-elite text-xs">{{ dept.trending_up }} trending up</span>
+                  <span v-if="dept.trending_down > 0" class="text-score-failing text-xs">{{ dept.trending_down }} trending down</span>
                 </div>
-                <ScoreBadge :score="Number(dept.avgScore)" size="sm" />
+                <ScoreBadge :score="Number(dept.avg_score)" size="sm" />
               </div>
               <div class="w-full bg-eval-surface rounded-full h-2 overflow-hidden">
                 <div
                   class="h-full rounded-full transition-all duration-500"
                   :style="{
-                    width: `${(Number(dept.avgScore) / 10) * 100}%`,
-                    backgroundColor: dept.color
+                    width: `${(Number(dept.avg_score) / 10) * 100}%`,
+                    backgroundColor: getDeptColor(dept.department)
                   }"
                 ></div>
               </div>
@@ -194,7 +235,11 @@ onMounted(loadData)
               </div>
               <div>
                 <div class="text-text-primary font-medium">{{ agent.name }}</div>
-                <DeptBadge :department="agent.department" size="sm" />
+                <div class="flex items-center gap-2">
+                  <DeptBadge :department="agent.department" size="sm" />
+                  <span v-if="agent.trend === 'up'" class="text-score-elite text-xs">&#8593;</span>
+                  <span v-if="agent.trend === 'down'" class="text-score-failing text-xs">&#8595;</span>
+                </div>
               </div>
             </div>
             <ScoreBadge :score="Number(agent.overall_score)" />

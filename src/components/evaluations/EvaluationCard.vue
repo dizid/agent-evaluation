@@ -11,6 +11,7 @@ const props = defineProps({
 })
 
 const expanded = ref(false)
+const reasoningExpanded = ref(false)
 
 const ratingLabel = computed(() =>
   props.evaluation.rating_label || getRatingLabel(props.evaluation.overall)
@@ -22,9 +23,12 @@ const formattedDate = computed(() => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 })
 
-const evaluatorLabel = computed(() =>
-  props.evaluation.evaluator_type === 'self' ? 'Self-eval' : 'Community'
-)
+const evaluatorLabel = computed(() => {
+  const t = props.evaluation.evaluator_type
+  if (t === 'auto') return 'Auto (G-Eval)'
+  if (t === 'self') return 'Self-eval'
+  return 'Manual'
+})
 
 // Find top strength (highest scoring criterion)
 const topStrength = computed(() => {
@@ -99,19 +103,35 @@ const kpiNames = computed(() => {
       </div>
     </div>
 
-    <!-- Expand toggle -->
-    <button
-      v-if="evaluation.scores"
-      @click="expanded = !expanded"
-      :aria-expanded="expanded"
-      class="text-xs text-text-muted hover:text-text-secondary transition-colors py-1"
-    >
-      {{ expanded ? 'Hide details' : 'Show score breakdown' }}
-    </button>
+    <!-- Expand toggles -->
+    <div class="flex items-center gap-3">
+      <button
+        v-if="evaluation.scores"
+        @click="expanded = !expanded"
+        :aria-expanded="expanded"
+        class="text-xs text-text-muted hover:text-text-secondary transition-colors py-1"
+      >
+        {{ expanded ? 'Hide scores' : 'Show score breakdown' }}
+      </button>
+      <button
+        v-if="evaluation.reasoning"
+        @click="reasoningExpanded = !reasoningExpanded"
+        :aria-expanded="reasoningExpanded"
+        class="text-xs text-text-muted hover:text-text-secondary transition-colors py-1"
+      >
+        {{ reasoningExpanded ? 'Hide reasoning' : 'Show AI reasoning' }}
+      </button>
+    </div>
 
     <!-- Expanded breakdown -->
     <div v-if="expanded && evaluation.scores" class="mt-3 pt-3 border-t border-eval-border">
       <ScoreBreakdown :scores="evaluation.scores" :kpi-names="kpiNames" />
+    </div>
+
+    <!-- Reasoning trace -->
+    <div v-if="reasoningExpanded && evaluation.reasoning" class="mt-3 pt-3 border-t border-eval-border">
+      <div class="text-[11px] font-semibold uppercase tracking-wider text-accent mb-2">G-Eval Reasoning</div>
+      <pre class="text-text-secondary text-xs leading-relaxed whitespace-pre-wrap font-sans bg-eval-surface rounded-lg p-3">{{ evaluation.reasoning }}</pre>
     </div>
   </div>
 </template>

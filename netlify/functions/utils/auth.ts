@@ -64,7 +64,7 @@ export async function authenticate(req: Request): Promise<AuthContext | Response
   try {
     const verified = await verifyToken(token, {
       secretKey: process.env.CLERK_SECRET_KEY!,
-      authorizedParties: ['http://localhost:3000', 'https://hirefire.dev']
+      authorizedParties: ['http://localhost:3000', 'https://hirefire.dev', 'https://dizid-agenteval.netlify.app']
     })
     clerkUserId = verified.sub
   } catch (err) {

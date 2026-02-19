@@ -227,6 +227,22 @@ export const markActionItemUnapplied = (agentId, evalId) => {
   })
 }
 
+export const previewActionEdit = (agentId, evalId) => {
+  return request(`/agents/${agentId}?action=preview_edit&eval_id=${evalId}`, {
+    method: 'PUT'
+  })
+}
+
+export const applyActionEdit = (agentId, evalId, confirmedPersona) => {
+  return request(`/agents/${agentId}?action=apply_edit&eval_id=${evalId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ confirmed_persona: confirmedPersona })
+  }).then(result => {
+    invalidateCache(`/agents/${agentId}`)
+    return result
+  })
+}
+
 // --- Organizations ---
 
 export const getOrganizations = () => fetchWithCache('/organizations')

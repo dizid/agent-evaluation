@@ -9,6 +9,7 @@ dist/
 .env
 .env.*
 !.env.example
+.mcp.json
 
 # Logs
 *.log
@@ -29,6 +30,9 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Security
+SECURITY.md
 
 # Misc
 *.txt

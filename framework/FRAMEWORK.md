@@ -1,6 +1,16 @@
 # Agent Evaluation Framework
 
-Scoring system for 18 agents across 5 departments. Used by `/rate` (quick) and `/evaluate-agent` (weekly deep review).
+Scoring system for 18 agents across 5 departments. Three evaluation channels feed into one database:
+
+| Channel | Trigger | Model | Weight | Cost |
+|---------|---------|-------|--------|------|
+| **Auto-eval** (fast) | Every SubagentStop hook | Haiku 4.5 G-Eval | 0.7 | ~$0.005 |
+| **Auto-eval** (deep) | Large transcript or low score | Sonnet via CLI | 0.7 | ~$0.05-0.15 |
+| **Manual** `/rate` | CEO runs after task | — (human-scored) | 1.0 | Free |
+| **Manual** `/evaluate-agent` | Weekly deep review | — (human-scored) | 1.0 | Free |
+| **Web UI** `/evaluate` | Browser form at hirefire.dev | — (human-scored) | 1.0 | Free |
+
+Auto-eval uses G-Eval methodology: chain-of-thought reasoning per criterion with calibration anchors. See `scripts/prompts/g-eval-system.txt` for the full prompt.
 
 ---
 
@@ -245,12 +255,12 @@ Evaluator: Auto (CEO override)
 
 ## Improvement Loop
 
-1. **Rate** — Run `/rate @AgentName` after significant tasks (POSTs to API)
-2. **Review** — Weekly `/evaluate-agent` across all active agents
-3. **Diagnose** — Identify lowest-scoring criteria
-4. **Improve** — Tune agent persona in `agents/[agent-id].md`, then run `/deploy-agents`
-5. **Re-evaluate** — Run same/similar task, compare scores
-6. **Track** — Save scorecards to `docs/agent-evaluations/scorecards/` for trend analysis
+1. **Auto-score** — Every subagent task is automatically evaluated via SubagentStop hook (no manual action)
+2. **Manual override** — Run `/rate @AgentName` for CEO-weighted scoring on significant work
+3. **Weekly review** — Run `/evaluate-agent` for deep cross-task analysis
+4. **Diagnose** — Check lowest-scoring criteria at hirefire.dev/agent/:id
+5. **Improve** — Apply action items → edits `agents/[agent-id].md` → `/deploy-agents` syncs globally
+6. **Track** — Dashboard shows trends, confidence levels, and department averages in real-time
 
 ### Action Item Rules
 
