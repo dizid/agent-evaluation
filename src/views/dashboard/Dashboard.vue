@@ -3,18 +3,22 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrgContext } from '@/composables/useOrgContext.js'
 import { useToast } from '@/composables/useToast.js'
+import { useOnboardingChecklist } from '@/composables/useOnboardingChecklist.js'
 import { getDashboardStats } from '@/services/api.js'
 import ScoreBadge from '@/components/ui/ScoreBadge.vue'
 import DeptBadge from '@/components/ui/DeptBadge.vue'
+import { CheckCircleIcon } from '@heroicons/vue/24/solid'
 import {
   ExclamationTriangleIcon,
   ShieldExclamationIcon,
   ClockIcon,
-  XMarkIcon
+  XMarkIcon,
+  ChevronDownIcon,
+  LightBulbIcon
 } from '@heroicons/vue/24/outline'
 
 const router = useRouter()
-const { currentOrg } = useOrgContext()
+const { currentOrg, orgSlug } = useOrgContext()
 const toast = useToast()
 
 const loading = ref(true)
@@ -25,6 +29,13 @@ const stats = computed(() => dashData.value?.stats || {})
 const deptPerformance = computed(() => dashData.value?.department_performance || [])
 const topAgents = computed(() => dashData.value?.top_agents || [])
 const pendingActions = computed(() => dashData.value?.pending_action_items || 0)
+
+// Onboarding checklist — auto-detects from live stats
+const { checklistState, isChecklistVisible, completeStep, dismissChecklist } =
+  useOnboardingChecklist(orgSlug, stats)
+
+// Collapsible "What are AI agents?" explainer
+const showAgentExplainer = ref(false)
 
 const alerts = computed(() => {
   const raw = dashData.value?.alerts || []
@@ -90,6 +101,162 @@ onMounted(loadData)
 
     <!-- Content -->
     <div v-else class="space-y-6">
+      <!-- Onboarding checklist (shown to new users until all steps done or dismissed) -->
+      <div v-if="isChecklistVisible" class="glass-card p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <h2 class="text-xl font-bold text-text-primary">
+              Welcome to {{ currentOrg?.name || 'your workspace' }}!
+            </h2>
+            <p class="text-text-secondary text-sm mt-1">
+              Get started in 3 steps.
+            </p>
+          </div>
+          <button
+            @click="dismissChecklist"
+            class="text-text-muted hover:text-text-secondary transition-colors text-sm ml-4 shrink-0"
+          >
+            Skip this guide
+          </button>
+        </div>
+
+        <!-- Collapsible explainer -->
+        <div class="mb-5 rounded-lg bg-accent/10 border border-accent/20">
+          <button
+            @click="showAgentExplainer = !showAgentExplainer"
+            class="w-full flex items-center justify-between px-4 py-3 text-left"
+          >
+            <div class="flex items-center gap-2">
+              <LightBulbIcon class="w-4 h-4 text-accent shrink-0" />
+              <span class="text-accent text-sm font-medium">What are AI agents?</span>
+            </div>
+            <ChevronDownIcon
+              class="w-4 h-4 text-accent transition-transform duration-200"
+              :class="showAgentExplainer ? 'rotate-180' : ''"
+            />
+          </button>
+          <div v-if="showAgentExplainer" class="px-4 pb-4">
+            <p class="text-text-secondary text-sm leading-relaxed">
+              AI agents are specialized assistants defined by persona files. Each has a role, personality traits, and measurable KPIs. Think of them as team members you can evaluate and improve.
+            </p>
+          </div>
+        </div>
+
+        <!-- 3 steps -->
+        <ol class="space-y-3">
+          <!-- Step 1: Browse marketplace -->
+          <li
+            class="flex items-start gap-3 p-3 rounded-lg transition-colors"
+            :class="checklistState.browsed_marketplace ? 'opacity-60' : 'hover:bg-eval-surface'"
+          >
+            <div class="shrink-0 mt-0.5">
+              <CheckCircleIcon
+                v-if="checklistState.browsed_marketplace"
+                class="w-6 h-6 text-score-strong"
+              />
+              <div
+                v-else
+                class="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold"
+              >
+                1
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div
+                class="text-text-primary font-medium text-sm cursor-pointer hover:text-accent transition-colors"
+                @click="router.push('/marketplace')"
+              >
+                Browse the Marketplace
+              </div>
+              <p class="text-text-muted text-xs mt-0.5">
+                Find agent templates for dev, marketing, ops, and more.
+              </p>
+            </div>
+            <button
+              v-if="!checklistState.browsed_marketplace"
+              @click="router.push('/marketplace')"
+              class="shrink-0 text-accent text-xs hover:text-accent-hover transition-colors font-medium"
+            >
+              Go &rarr;
+            </button>
+          </li>
+
+          <!-- Step 2: Install first agent -->
+          <li
+            class="flex items-start gap-3 p-3 rounded-lg transition-colors"
+            :class="checklistState.installed_agent ? 'opacity-60' : 'hover:bg-eval-surface'"
+          >
+            <div class="shrink-0 mt-0.5">
+              <CheckCircleIcon
+                v-if="checklistState.installed_agent"
+                class="w-6 h-6 text-score-strong"
+              />
+              <div
+                v-else
+                class="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold"
+              >
+                2
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div
+                class="text-text-primary font-medium text-sm cursor-pointer hover:text-accent transition-colors"
+                @click="router.push('/marketplace')"
+              >
+                Install Your First Agent
+              </div>
+              <p class="text-text-muted text-xs mt-0.5">
+                Pick a template and add it to your organization.
+              </p>
+            </div>
+            <button
+              v-if="!checklistState.installed_agent"
+              @click="router.push('/marketplace')"
+              class="shrink-0 text-accent text-xs hover:text-accent-hover transition-colors font-medium"
+            >
+              Go &rarr;
+            </button>
+          </li>
+
+          <!-- Step 3: Write first evaluation -->
+          <li
+            class="flex items-start gap-3 p-3 rounded-lg transition-colors"
+            :class="checklistState.submitted_evaluation ? 'opacity-60' : 'hover:bg-eval-surface'"
+          >
+            <div class="shrink-0 mt-0.5">
+              <CheckCircleIcon
+                v-if="checklistState.submitted_evaluation"
+                class="w-6 h-6 text-score-strong"
+              />
+              <div
+                v-else
+                class="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-white text-xs font-bold"
+              >
+                3
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div
+                class="text-text-primary font-medium text-sm cursor-pointer hover:text-accent transition-colors"
+                @click="router.push('/evaluate')"
+              >
+                Write Your First Evaluation
+              </div>
+              <p class="text-text-muted text-xs mt-0.5">
+                Score across 8 dimensions + role KPIs.
+              </p>
+            </div>
+            <button
+              v-if="!checklistState.submitted_evaluation"
+              @click="router.push('/evaluate')"
+              class="shrink-0 text-accent text-xs hover:text-accent-hover transition-colors font-medium"
+            >
+              Go &rarr;
+            </button>
+          </li>
+        </ol>
+      </div>
+
       <!-- Alert banners -->
       <div v-if="alerts.length > 0" class="space-y-2">
         <!-- Critical alerts (red) -->

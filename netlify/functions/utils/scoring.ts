@@ -63,7 +63,9 @@ export function bayesianScore(v: number, R: number, m = 5, C = 6.0): number {
 export function getRatingLabel(score: number | null): string | null {
   if (score == null) return null
   if (score >= 9) return 'Elite'
+  if (score >= 8) return 'Advanced'
   if (score >= 7) return 'Strong'
+  if (score >= 6) return 'Solid'
   if (score >= 5) return 'Adequate'
   if (score >= 3) return 'Weak'
   return 'Failing'

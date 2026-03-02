@@ -4,17 +4,20 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { getMarketplaceTemplate, installTemplate, getDepartments } from '@/services/api'
 import { useToast } from '@/composables/useToast'
 import { useOrgContext } from '@/composables/useOrgContext'
+import { useOnboardingChecklist } from '@/composables/useOnboardingChecklist.js'
 import {
   ArrowLeftIcon,
   CheckIcon,
   ArrowRightIcon,
-  ArrowDownTrayIcon
+  ArrowDownTrayIcon,
+  ChevronDownIcon
 } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
-const { currentOrg } = useOrgContext()
+const { currentOrg, orgSlug } = useOrgContext()
+const { completeStep } = useOnboardingChecklist(orgSlug)
 
 const template = ref(null)
 const departments = ref([])
@@ -22,7 +25,8 @@ const loading = ref(true)
 const error = ref(null)
 const installing = ref(false)
 
-const step = ref(1) // 1: Preview, 2: Customize, 3: Confirm, 4: Download
+// Steps: 1 = Customize, 2 = Confirm, 3 = Complete
+const step = ref(1)
 const installedAgent = ref(null)
 
 // Customization form
@@ -30,6 +34,9 @@ const agentId = ref('')
 const displayName = ref('')
 const selectedDepartment = ref('')
 const customPersona = ref('')
+
+// Collapsible "What does installing do?" explainer
+const showInstallInfo = ref(false)
 
 onMounted(async () => {
   try {
@@ -64,11 +71,12 @@ const validateAgentId = computed(() => {
 })
 
 const canProceed = computed(() => {
-  if (step.value === 1) return true
-  if (step.value === 2) {
+  // Step 1: Customize — validate form fields
+  if (step.value === 1) {
     return validateAgentId.value.valid && displayName.value.trim() && selectedDepartment.value
   }
-  if (step.value === 3) return true
+  // Step 2: Confirm — always can proceed (install button triggers action)
+  if (step.value === 2) return true
   return false
 })
 
@@ -97,7 +105,9 @@ const handleInstall = async () => {
     installedAgent.value = result.agent || result
 
     toast.success('Agent installed successfully!')
-    step.value = 4 // Go to download step
+    // Mark onboarding step complete
+    completeStep('installed_agent')
+    step.value = 3 // Go to complete step
   } catch (e) {
     if (e.message.includes('409') || e.message.toLowerCase().includes('already exists')) {
       toast.error('An agent with this ID already exists in your organization')
@@ -142,7 +152,7 @@ const goToAgent = () => {
 }
 
 const stepIndicator = computed(() => {
-  const steps = ['Preview', 'Customize', 'Confirm', 'Download']
+  const steps = ['Customize', 'Confirm', 'Complete']
   return steps.map((label, idx) => ({
     number: idx + 1,
     label,
@@ -220,32 +230,37 @@ const stepIndicator = computed(() => {
         </div>
       </div>
 
-      <!-- Step 1: Preview -->
+      <!-- Step 1: Customize -->
       <div v-if="step === 1" class="space-y-6">
-        <div class="glass-card p-6">
-          <h2 class="text-xl font-bold text-text-primary mb-2">{{ template.name }}</h2>
-          <p class="text-text-secondary text-sm mb-4">{{ template.role }}</p>
-          <p class="text-text-secondary text-sm leading-relaxed mb-4">{{ template.description }}</p>
+        <!-- Compact template summary -->
+        <div class="glass-card px-4 py-3 flex items-center gap-3">
+          <div class="flex-1 min-w-0">
+            <span class="text-text-primary font-semibold text-sm">{{ template.name }}</span>
+            <span class="text-text-muted text-xs ml-2">{{ template.role }}</span>
+          </div>
+          <span class="text-text-muted text-xs shrink-0">{{ template.install_count || 0 }} installs</span>
+        </div>
 
-          <div class="flex items-center gap-2 text-text-muted text-xs">
-            <span>{{ template.install_count || 0 }} installs</span>
-            <span v-if="template.avg_rating">{{ template.avg_rating.toFixed(1) }} rating</span>
+        <!-- Collapsible install explainer -->
+        <div class="rounded-lg bg-accent/10 border border-accent/20">
+          <button
+            @click="showInstallInfo = !showInstallInfo"
+            class="w-full flex items-center justify-between px-4 py-3 text-left"
+          >
+            <span class="text-accent text-sm font-medium">What does installing do?</span>
+            <ChevronDownIcon
+              class="w-4 h-4 text-accent transition-transform duration-200"
+              :class="showInstallInfo ? 'rotate-180' : ''"
+            />
+          </button>
+          <div v-if="showInstallInfo" class="px-4 pb-4">
+            <p class="text-text-secondary text-sm leading-relaxed">
+              Installing creates an agent in your organization that you can evaluate and track. The agent gets a scorecard, performance trends, and improvement loop. If you use Claude Code, you can also download the persona .md file.
+            </p>
           </div>
         </div>
 
-        <div class="flex justify-end">
-          <button
-            @click="nextStep"
-            class="inline-flex items-center gap-2 px-6 py-2.5 bg-accent hover:bg-accent-hover rounded-lg text-white font-medium transition-colors"
-          >
-            Next
-            <ArrowRightIcon class="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      <!-- Step 2: Customize -->
-      <div v-if="step === 2" class="space-y-6">
+        <!-- Customization form -->
         <div class="glass-card p-6">
           <h2 class="text-lg font-bold text-text-primary mb-4">Customize Agent</h2>
 
@@ -315,13 +330,7 @@ const stepIndicator = computed(() => {
           </div>
         </div>
 
-        <div class="flex justify-between">
-          <button
-            @click="prevStep"
-            class="px-6 py-2.5 bg-eval-card hover:bg-eval-surface border border-eval-border rounded-lg text-text-secondary hover:text-text-primary transition-colors font-medium"
-          >
-            Back
-          </button>
+        <div class="flex justify-end">
           <button
             @click="nextStep"
             :disabled="!canProceed"
@@ -338,8 +347,8 @@ const stepIndicator = computed(() => {
         </div>
       </div>
 
-      <!-- Step 3: Confirm & Install -->
-      <div v-if="step === 3" class="space-y-6">
+      <!-- Step 2: Confirm & Install -->
+      <div v-if="step === 2" class="space-y-6">
         <div class="glass-card p-6">
           <h2 class="text-lg font-bold text-text-primary mb-4">Confirm Installation</h2>
 
@@ -402,51 +411,76 @@ const stepIndicator = computed(() => {
         </div>
       </div>
 
-      <!-- Step 4: Download -->
-      <div v-if="step === 4 && installedAgent" class="space-y-6">
+      <!-- Step 3: Complete -->
+      <div v-if="step === 3 && installedAgent" class="space-y-6">
+        <!-- Success header -->
         <div class="glass-card p-6">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-12 h-12 bg-accent/20 text-accent rounded-full flex items-center justify-center">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-accent/20 text-accent rounded-full flex items-center justify-center shrink-0">
               <CheckIcon class="w-6 h-6" />
             </div>
             <div>
               <h2 class="text-lg font-bold text-text-primary">Installation Complete!</h2>
-              <p class="text-text-secondary text-sm">Agent installed successfully</p>
+              <p class="text-text-secondary text-sm">
+                <span class="font-medium text-text-primary">{{ installedAgent.name }}</span> is now in your organization.
+              </p>
             </div>
           </div>
         </div>
 
-        <!-- Download section -->
-        <div class="glass-card p-6">
-          <h3 class="text-sm font-semibold text-text-primary mb-3">Download Agent File</h3>
-          <p class="text-text-secondary text-sm mb-4 leading-relaxed">
-            Download the .md file and save it to <code class="px-1.5 py-0.5 bg-eval-surface rounded text-accent text-xs">~/.claude/agents/</code> to use this agent in Claude Code.
-          </p>
-
-          <div class="bg-eval-surface border border-eval-border rounded-lg p-4 mb-4 max-h-64 overflow-y-auto">
-            <pre class="text-text-secondary text-xs font-mono whitespace-pre-wrap">{{ generateMarkdownFile(installedAgent) }}</pre>
+        <!-- Two guided paths: side-by-side on md+, stacked on mobile -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Web Dashboard path -->
+          <div class="glass-card p-5 flex flex-col gap-3">
+            <div>
+              <h3 class="text-text-primary font-semibold text-sm mb-1">Web Dashboard</h3>
+              <p class="text-text-secondary text-sm leading-relaxed">
+                Your agent now appears in Browse and Leaderboard. Start by evaluating it to build a performance baseline.
+              </p>
+            </div>
+            <div class="mt-auto">
+              <button
+                @click="router.push(`/evaluate?agent=${installedAgent.id}`)"
+                class="w-full px-4 py-2 bg-accent hover:bg-accent-hover rounded-lg text-white text-sm font-medium transition-colors"
+              >
+                Evaluate This Agent
+              </button>
+            </div>
           </div>
 
-          <button
-            @click="downloadFile"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover rounded-lg text-white font-medium transition-colors"
-          >
-            <ArrowDownTrayIcon class="w-4 h-4" />
-            Download .md file
-          </button>
+          <!-- Claude Code path -->
+          <div class="glass-card p-5 flex flex-col gap-3">
+            <div>
+              <h3 class="text-text-primary font-semibold text-sm mb-1">Claude Code <span class="text-text-muted font-normal">(optional)</span></h3>
+              <p class="text-text-secondary text-sm leading-relaxed">
+                Download the .md file and save it to
+                <code class="px-1 py-0.5 bg-eval-surface rounded text-accent text-xs">~/.claude/agents/</code>
+                to use this agent in Claude Code.
+              </p>
+            </div>
+            <div class="mt-auto">
+              <button
+                @click="downloadFile"
+                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-eval-surface hover:bg-eval-card border border-eval-border rounded-lg text-text-secondary hover:text-text-primary text-sm font-medium transition-colors"
+              >
+                <ArrowDownTrayIcon class="w-4 h-4" />
+                Download .md file
+              </button>
+            </div>
+          </div>
         </div>
 
-        <!-- Next steps -->
+        <!-- Bottom nav -->
         <div class="flex gap-3">
           <button
             @click="goToAgent"
-            class="flex-1 px-6 py-2.5 bg-accent hover:bg-accent-hover rounded-lg text-white font-medium transition-colors"
+            class="flex-1 px-6 py-2.5 bg-eval-card hover:bg-eval-surface border border-eval-border rounded-lg text-text-secondary hover:text-text-primary transition-colors font-medium"
           >
             Go to Agent
           </button>
           <RouterLink
             to="/marketplace"
-            class="flex-1 px-6 py-2.5 bg-eval-card hover:bg-eval-surface border border-eval-border rounded-lg text-text-secondary hover:text-text-primary transition-colors font-medium text-center"
+            class="flex-1 px-6 py-2.5 bg-eval-surface hover:bg-eval-card border border-eval-border rounded-lg text-text-muted hover:text-text-secondary transition-colors font-medium text-center"
           >
             Browse More Templates
           </RouterLink>

@@ -2,6 +2,7 @@
 import { ref, watch, computed, onMounted } from 'vue'
 import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router'
 import { useAuth, useUser, SignedIn, SignedOut } from '@clerk/vue'
+import { Bars3Icon, XMarkIcon } from '@heroicons/vue/24/outline'
 import ToastContainer from './components/ui/ToastContainer.vue'
 import { setAuthProvider, clearAllCache } from './services/api.js'
 import { useOrgContext } from './composables/useOrgContext.js'
@@ -86,6 +87,18 @@ const userName = computed(() =>
   'User'
 )
 const userAvatar = computed(() => user.value?.imageUrl || null)
+
+// Mobile menu
+const mobileMenuOpen = ref(false)
+
+function closeMobileMenu() {
+  mobileMenuOpen.value = false
+}
+
+// Close mobile menu on route change
+watch(() => route.path, () => {
+  mobileMenuOpen.value = false
+})
 </script>
 
 <template>
@@ -159,7 +172,7 @@ const userAvatar = computed(() => user.value?.imageUrl || null)
               >Dashboard</RouterLink>
               <RouterLink
                 to="/browse"
-                class="text-text-secondary hover:text-text-primary transition-colors"
+                class="hidden sm:inline text-text-secondary hover:text-text-primary transition-colors"
                 active-class="text-text-primary"
               >Browse</RouterLink>
               <RouterLink
@@ -169,7 +182,7 @@ const userAvatar = computed(() => user.value?.imageUrl || null)
               >Leaderboard</RouterLink>
               <RouterLink
                 to="/marketplace"
-                class="text-text-secondary hover:text-text-primary transition-colors"
+                class="hidden sm:inline text-text-secondary hover:text-text-primary transition-colors"
                 active-class="text-text-primary"
               >Marketplace</RouterLink>
               <RouterLink
@@ -213,30 +226,182 @@ const userAvatar = computed(() => user.value?.imageUrl || null)
               </div>
             </SignedIn>
 
+            <!-- Mobile hamburger (authenticated) -->
+            <SignedIn>
+              <button
+                @click="mobileMenuOpen = true"
+                class="sm:hidden p-2 text-text-secondary hover:text-text-primary transition-colors"
+                aria-label="Open menu"
+              >
+                <Bars3Icon class="w-6 h-6" />
+              </button>
+            </SignedIn>
+
             <!-- Public nav -->
             <SignedOut>
               <RouterLink
                 to="/marketplace"
-                class="text-text-secondary hover:text-text-primary transition-colors"
+                class="hidden sm:inline text-text-secondary hover:text-text-primary transition-colors"
                 active-class="text-text-primary"
               >Marketplace</RouterLink>
               <RouterLink
                 to="/pricing"
-                class="text-text-secondary hover:text-text-primary transition-colors"
+                class="hidden sm:inline text-text-secondary hover:text-text-primary transition-colors"
                 active-class="text-text-primary"
               >Pricing</RouterLink>
               <RouterLink
                 to="/sign-in"
-                class="text-text-secondary hover:text-text-primary transition-colors"
+                class="hidden sm:inline text-text-secondary hover:text-text-primary transition-colors"
               >Sign In</RouterLink>
               <RouterLink
                 to="/sign-up"
                 class="px-3 py-1.5 bg-accent hover:bg-accent-hover rounded-lg text-white text-sm transition-colors"
               >Get Started</RouterLink>
+              <!-- Mobile hamburger (public) -->
+              <button
+                @click="mobileMenuOpen = true"
+                class="sm:hidden p-2 text-text-secondary hover:text-text-primary transition-colors"
+                aria-label="Open menu"
+              >
+                <Bars3Icon class="w-6 h-6" />
+              </button>
             </SignedOut>
           </div>
         </div>
       </nav>
+
+      <!-- Mobile menu overlay (Teleported to body to avoid z-index issues) -->
+      <Teleport to="body">
+        <Transition
+          enter-active-class="transition-opacity duration-200"
+          enter-from-class="opacity-0"
+          enter-to-class="opacity-100"
+          leave-active-class="transition-opacity duration-200"
+          leave-from-class="opacity-100"
+          leave-to-class="opacity-0"
+        >
+          <div v-if="mobileMenuOpen" class="fixed inset-0 z-50 sm:hidden">
+            <!-- Backdrop -->
+            <div class="absolute inset-0 bg-black/50" @click="closeMobileMenu"></div>
+
+            <!-- Slide-in panel from right -->
+            <div class="absolute right-0 top-0 h-full w-72 max-w-[85vw] bg-eval-bg border-l border-eval-border shadow-xl overflow-y-auto">
+              <!-- Panel header -->
+              <div class="flex items-center justify-between p-4 border-b border-eval-border">
+                <div>
+                  <span class="text-accent font-bold">AgentEval</span>
+                  <SignedIn>
+                    <p v-if="currentOrg" class="text-text-muted text-xs mt-0.5">{{ currentOrg.name }}</p>
+                  </SignedIn>
+                </div>
+                <button
+                  @click="closeMobileMenu"
+                  class="p-2 text-text-muted hover:text-text-primary transition-colors"
+                  aria-label="Close menu"
+                >
+                  <XMarkIcon class="w-5 h-5" />
+                </button>
+              </div>
+
+              <!-- Authenticated links -->
+              <SignedIn>
+                <nav class="py-2">
+                  <RouterLink
+                    to="/dashboard"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-text-secondary hover:text-text-primary hover:bg-white/5 transition-colors"
+                    active-class="text-accent"
+                  >Dashboard</RouterLink>
+                  <RouterLink
+                    to="/browse"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-text-secondary hover:text-text-primary hover:bg-white/5 transition-colors"
+                    active-class="text-accent"
+                  >Browse Agents</RouterLink>
+                  <RouterLink
+                    to="/leaderboard"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-text-secondary hover:text-text-primary hover:bg-white/5 transition-colors"
+                    active-class="text-accent"
+                  >Leaderboard</RouterLink>
+                  <RouterLink
+                    to="/marketplace"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-text-secondary hover:text-text-primary hover:bg-white/5 transition-colors"
+                    active-class="text-accent"
+                  >Marketplace</RouterLink>
+                  <RouterLink
+                    v-if="canManageAgents"
+                    to="/manage"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-text-secondary hover:text-text-primary hover:bg-white/5 transition-colors"
+                    active-class="text-accent"
+                  >Manage Agents</RouterLink>
+                  <RouterLink
+                    to="/evaluate"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-accent font-medium hover:bg-accent/10 transition-colors"
+                  >Evaluate Agent</RouterLink>
+
+                  <div class="border-t border-eval-border my-2"></div>
+
+                  <RouterLink
+                    to="/profile"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-text-secondary hover:text-text-primary hover:bg-white/5 transition-colors"
+                    active-class="text-accent"
+                  >Profile</RouterLink>
+                  <RouterLink
+                    to="/settings"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-text-secondary hover:text-text-primary hover:bg-white/5 transition-colors"
+                    active-class="text-accent"
+                  >Settings</RouterLink>
+
+                  <div class="border-t border-eval-border my-2"></div>
+
+                  <RouterLink
+                    to="/sign-in"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-red-400 hover:bg-white/5 transition-colors"
+                  >Sign Out</RouterLink>
+                </nav>
+              </SignedIn>
+
+              <!-- Public links -->
+              <SignedOut>
+                <nav class="py-2">
+                  <RouterLink
+                    to="/marketplace"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-text-secondary hover:text-text-primary hover:bg-white/5 transition-colors"
+                    active-class="text-accent"
+                  >Marketplace</RouterLink>
+                  <RouterLink
+                    to="/pricing"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-text-secondary hover:text-text-primary hover:bg-white/5 transition-colors"
+                    active-class="text-accent"
+                  >Pricing</RouterLink>
+
+                  <div class="border-t border-eval-border my-2"></div>
+
+                  <RouterLink
+                    to="/sign-in"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-text-secondary hover:text-text-primary hover:bg-white/5 transition-colors"
+                  >Sign In</RouterLink>
+                  <RouterLink
+                    to="/sign-up"
+                    @click="closeMobileMenu"
+                    class="block px-4 py-3 text-accent font-medium hover:bg-accent/10 transition-colors"
+                  >Get Started</RouterLink>
+                </nav>
+              </SignedOut>
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
 
       <!-- Main content with route transitions -->
       <main class="max-w-6xl mx-auto px-4 py-6">

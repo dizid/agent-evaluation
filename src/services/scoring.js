@@ -51,7 +51,9 @@ export function bayesianScore(v, R, m = 5, C = 6.0) {
 export function getRatingLabel(score) {
   if (score == null) return null
   if (score >= 9) return 'Elite'
+  if (score >= 8) return 'Advanced'
   if (score >= 7) return 'Strong'
+  if (score >= 6) return 'Solid'
   if (score >= 5) return 'Adequate'
   if (score >= 3) return 'Weak'
   return 'Failing'
@@ -69,7 +71,9 @@ export function getConfidence(evalCount) {
 export function getScoreColor(score) {
   if (score == null) return 'text-text-muted'
   if (score >= 9) return 'text-score-elite'
+  if (score >= 8) return 'text-score-advanced'
   if (score >= 7) return 'text-score-strong'
+  if (score >= 6) return 'text-score-solid'
   if (score >= 5) return 'text-score-adequate'
   if (score >= 3) return 'text-score-weak'
   return 'text-score-failing'
@@ -79,7 +83,9 @@ export function getScoreColor(score) {
 export function getScoreBgColor(score) {
   if (score == null) return 'bg-eval-card'
   if (score >= 9) return 'bg-score-elite/10'
+  if (score >= 8) return 'bg-score-advanced/10'
   if (score >= 7) return 'bg-score-strong/10'
+  if (score >= 6) return 'bg-score-solid/10'
   if (score >= 5) return 'bg-score-adequate/10'
   if (score >= 3) return 'bg-score-weak/10'
   return 'bg-score-failing/10'

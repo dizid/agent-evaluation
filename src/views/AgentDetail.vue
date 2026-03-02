@@ -20,7 +20,8 @@ import {
   ChartBarIcon,
   ClockIcon,
   ChevronDownIcon,
-  PencilSquareIcon
+  PencilSquareIcon,
+  GlobeAltIcon
 } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
@@ -322,6 +323,14 @@ const personaSections = computed(() => {
           class="inline-flex items-center gap-2 px-5 py-2.5 bg-eval-card hover:bg-eval-surface border border-eval-border rounded-lg text-text-secondary hover:text-text-primary transition-colors"
         >
           Edit
+        </RouterLink>
+        <RouterLink
+          v-if="agent.status === 'active'"
+          :to="`/marketplace/publish/${agent.id}`"
+          class="inline-flex items-center gap-2 px-5 py-2.5 bg-eval-card hover:bg-eval-surface border border-eval-border rounded-lg text-text-secondary hover:text-text-primary transition-colors"
+        >
+          <GlobeAltIcon class="w-4 h-4" />
+          Publish
         </RouterLink>
       </div>
 

@@ -47,9 +47,19 @@ describe('RatingLabel', () => {
     expect(wrapper.classes()).toContain('text-score-elite')
   })
 
+  it('applies text-score-advanced for Advanced', () => {
+    const wrapper = mount(RatingLabel, { props: { label: 'Advanced' } })
+    expect(wrapper.classes()).toContain('text-score-advanced')
+  })
+
   it('applies text-score-strong for Strong', () => {
     const wrapper = mount(RatingLabel, { props: { label: 'Strong' } })
     expect(wrapper.classes()).toContain('text-score-strong')
+  })
+
+  it('applies text-score-solid for Solid', () => {
+    const wrapper = mount(RatingLabel, { props: { label: 'Solid' } })
+    expect(wrapper.classes()).toContain('text-score-solid')
   })
 
   it('applies text-score-adequate for Adequate', () => {
@@ -87,7 +97,7 @@ describe('RatingLabel', () => {
   // ─── Icons ────────────────────────────────────────────────────────
 
   it('renders an icon for each known label', () => {
-    for (const label of ['Elite', 'Strong', 'Adequate', 'Weak', 'Failing']) {
+    for (const label of ['Elite', 'Advanced', 'Strong', 'Solid', 'Adequate', 'Weak', 'Failing']) {
       const wrapper = mount(RatingLabel, { props: { label } })
       expect(wrapper.find('svg').exists()).toBe(true)
     }
@@ -122,9 +132,19 @@ describe('RatingLabel', () => {
     expect(wrapper.attributes('data-tooltip')).toContain('9.0-10.0')
   })
 
+  it('shows tooltip with score range for Advanced', () => {
+    const wrapper = mount(RatingLabel, { props: { label: 'Advanced' } })
+    expect(wrapper.attributes('data-tooltip')).toContain('8.0-8.9')
+  })
+
   it('shows tooltip with score range for Strong', () => {
     const wrapper = mount(RatingLabel, { props: { label: 'Strong' } })
-    expect(wrapper.attributes('data-tooltip')).toContain('7.0-8.9')
+    expect(wrapper.attributes('data-tooltip')).toContain('7.0-7.9')
+  })
+
+  it('shows tooltip with score range for Solid', () => {
+    const wrapper = mount(RatingLabel, { props: { label: 'Solid' } })
+    expect(wrapper.attributes('data-tooltip')).toContain('6.0-6.9')
   })
 
   it('shows "Not yet rated" tooltip for null label', () => {

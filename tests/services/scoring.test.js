@@ -168,16 +168,28 @@ describe('getRatingLabel', () => {
     expect(getRatingLabel(10.0)).toBe('Elite')
   })
 
-  it('returns Strong for scores 7.0-8.9', () => {
-    expect(getRatingLabel(7.0)).toBe('Strong')
-    expect(getRatingLabel(8.0)).toBe('Strong')
-    expect(getRatingLabel(8.9)).toBe('Strong')
+  it('returns Advanced for scores 8.0-8.9', () => {
+    expect(getRatingLabel(8.0)).toBe('Advanced')
+    expect(getRatingLabel(8.5)).toBe('Advanced')
+    expect(getRatingLabel(8.9)).toBe('Advanced')
   })
 
-  it('returns Adequate for scores 5.0-6.9', () => {
+  it('returns Strong for scores 7.0-7.9', () => {
+    expect(getRatingLabel(7.0)).toBe('Strong')
+    expect(getRatingLabel(7.5)).toBe('Strong')
+    expect(getRatingLabel(7.9)).toBe('Strong')
+  })
+
+  it('returns Solid for scores 6.0-6.9', () => {
+    expect(getRatingLabel(6.0)).toBe('Solid')
+    expect(getRatingLabel(6.5)).toBe('Solid')
+    expect(getRatingLabel(6.9)).toBe('Solid')
+  })
+
+  it('returns Adequate for scores 5.0-5.9', () => {
     expect(getRatingLabel(5.0)).toBe('Adequate')
-    expect(getRatingLabel(6.0)).toBe('Adequate')
-    expect(getRatingLabel(6.9)).toBe('Adequate')
+    expect(getRatingLabel(5.5)).toBe('Adequate')
+    expect(getRatingLabel(5.9)).toBe('Adequate')
   })
 
   it('returns Weak for scores 3.0-4.9', () => {
@@ -200,12 +212,22 @@ describe('getRatingLabel', () => {
   // Boundary tests
   it('handles exact boundary at 9.0 (Elite)', () => {
     expect(getRatingLabel(9.0)).toBe('Elite')
-    expect(getRatingLabel(8.99)).toBe('Strong')
+    expect(getRatingLabel(8.99)).toBe('Advanced')
+  })
+
+  it('handles exact boundary at 8.0 (Advanced)', () => {
+    expect(getRatingLabel(8.0)).toBe('Advanced')
+    expect(getRatingLabel(7.99)).toBe('Strong')
   })
 
   it('handles exact boundary at 7.0 (Strong)', () => {
     expect(getRatingLabel(7.0)).toBe('Strong')
-    expect(getRatingLabel(6.99)).toBe('Adequate')
+    expect(getRatingLabel(6.99)).toBe('Solid')
+  })
+
+  it('handles exact boundary at 6.0 (Solid)', () => {
+    expect(getRatingLabel(6.0)).toBe('Solid')
+    expect(getRatingLabel(5.99)).toBe('Adequate')
   })
 
   it('handles exact boundary at 5.0 (Adequate)', () => {
@@ -227,14 +249,24 @@ describe('getScoreColor', () => {
     expect(getScoreColor(10)).toBe('text-score-elite')
   })
 
-  it('returns text-score-strong for 7.0-8.9', () => {
-    expect(getScoreColor(7.0)).toBe('text-score-strong')
-    expect(getScoreColor(8.5)).toBe('text-score-strong')
+  it('returns text-score-advanced for 8.0-8.9', () => {
+    expect(getScoreColor(8.0)).toBe('text-score-advanced')
+    expect(getScoreColor(8.5)).toBe('text-score-advanced')
   })
 
-  it('returns text-score-adequate for 5.0-6.9', () => {
+  it('returns text-score-strong for 7.0-7.9', () => {
+    expect(getScoreColor(7.0)).toBe('text-score-strong')
+    expect(getScoreColor(7.5)).toBe('text-score-strong')
+  })
+
+  it('returns text-score-solid for 6.0-6.9', () => {
+    expect(getScoreColor(6.0)).toBe('text-score-solid')
+    expect(getScoreColor(6.5)).toBe('text-score-solid')
+  })
+
+  it('returns text-score-adequate for 5.0-5.9', () => {
     expect(getScoreColor(5.0)).toBe('text-score-adequate')
-    expect(getScoreColor(6.5)).toBe('text-score-adequate')
+    expect(getScoreColor(5.5)).toBe('text-score-adequate')
   })
 
   it('returns text-score-weak for 3.0-4.9', () => {
@@ -258,7 +290,9 @@ describe('getScoreColor', () => {
 describe('getScoreBgColor', () => {
   it('returns correct bg class for each tier', () => {
     expect(getScoreBgColor(9.5)).toBe('bg-score-elite/10')
+    expect(getScoreBgColor(8.5)).toBe('bg-score-advanced/10')
     expect(getScoreBgColor(7.5)).toBe('bg-score-strong/10')
+    expect(getScoreBgColor(6.5)).toBe('bg-score-solid/10')
     expect(getScoreBgColor(5.5)).toBe('bg-score-adequate/10')
     expect(getScoreBgColor(3.5)).toBe('bg-score-weak/10')
     expect(getScoreBgColor(1.5)).toBe('bg-score-failing/10')

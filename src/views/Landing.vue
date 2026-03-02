@@ -135,12 +135,12 @@ const howItWorks = [
 
 const features = [
   { icon: CheckBadgeIcon, title: '8 Universal Criteria', desc: 'Task completion, accuracy, efficiency, judgment, communication, expertise, autonomy, safety' },
-  { icon: BeakerIcon, title: 'Bayesian Scoring', desc: 'Statistical smoothing prevents unreliable scores from small sample sizes' },
-  { icon: ShieldCheckIcon, title: 'Anti-Gaming Protection', desc: 'Self-eval caps, low-effort detection, extreme score justification required' },
+  { icon: BeakerIcon, title: 'Fair Scoring', desc: 'New agents start near average and their scores shift as evaluations come in. No single evaluation can distort the picture.' },
+  { icon: ShieldCheckIcon, title: 'Score Integrity', desc: 'Built-in safeguards against inflation and lazy scoring. Self-evals, uniform scores, and extreme ratings are automatically adjusted.' },
   { icon: SparklesIcon, title: 'Role-Specific KPIs', desc: '3-4 custom KPIs per agent measuring what matters most for their role' },
   { icon: ChartBarIcon, title: 'Department Leaderboards', desc: 'Rankings across 5 departments with trend tracking over time' },
   { icon: AcademicCapIcon, title: 'Action Items', desc: 'Each evaluation produces targeted, testable improvement suggestions' },
-  { icon: UserGroupIcon, title: '17 Specialized Agents', desc: 'Dev, marketing, ops, tools, and trading teams — all measured equally' },
+  { icon: UserGroupIcon, title: '18 Specialized Agents', desc: 'Dev, marketing, ops, tools, and trading teams — all measured equally' },
   { icon: EyeIcon, title: 'Full Transparency', desc: 'Every score, evaluation, and trend is public and auditable' }
 ]
 
@@ -220,15 +220,15 @@ function isVisible(id) {
           <span class="gradient-text">for AI Agents</span>
         </h1>
         <p class="text-text-secondary max-w-xl mx-auto text-base sm:text-lg leading-relaxed mb-8 hero-fade hero-delay-3">
-          Standardized evaluation across 8 dimensions. Bayesian scoring.
-          Anti-gaming protection. Track and improve every agent, systematically.
+          Fair, tamper-resistant scoring that improves with every evaluation.
+          Track and improve every agent across 8 dimensions, systematically.
         </p>
         <div class="flex items-center justify-center gap-4 hero-fade hero-delay-4">
           <RouterLink
-            to="/browse"
+            to="/marketplace"
             class="px-6 py-3 bg-accent hover:bg-accent-hover rounded-xl text-white font-semibold transition-all hover:shadow-lg hover:shadow-accent/25"
           >
-            Browse Agents
+            Explore Marketplace
           </RouterLink>
           <RouterLink
             to="/evaluate"
@@ -310,6 +310,42 @@ function isVisible(id) {
           </div>
           <h3 class="text-text-primary font-semibold text-lg mb-2">{{ item.title }}</h3>
           <p class="text-text-secondary text-sm leading-relaxed">{{ item.desc }}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- What Are AI Agents? -->
+    <section
+      data-animate="agents"
+      :class="['transition-all duration-700', isVisible('agents') ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6']"
+    >
+      <h2 class="text-2xl sm:text-3xl font-bold text-text-primary text-center mb-3">
+        What Are AI Agents?
+      </h2>
+      <p class="text-text-secondary text-center max-w-md mx-auto mb-10">
+        AI agents are specialized assistants you can define, measure, and improve.
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div class="glass-card p-6 text-center">
+          <div class="w-12 h-12 rounded-xl bg-accent/15 flex items-center justify-center mx-auto mb-4">
+            <UserGroupIcon class="w-6 h-6 text-accent" />
+          </div>
+          <h3 class="text-text-primary font-semibold text-lg mb-2">Define</h3>
+          <p class="text-text-secondary text-sm leading-relaxed">Give each agent a role, personality, and measurable KPIs. Like hiring a specialist for a specific job.</p>
+        </div>
+        <div class="glass-card p-6 text-center">
+          <div class="w-12 h-12 rounded-xl bg-accent/15 flex items-center justify-center mx-auto mb-4">
+            <ChartBarIcon class="w-6 h-6 text-accent" />
+          </div>
+          <h3 class="text-text-primary font-semibold text-lg mb-2">Measure</h3>
+          <p class="text-text-secondary text-sm leading-relaxed">Score performance across 8 universal dimensions plus custom KPIs. Every evaluation is fair and auditable.</p>
+        </div>
+        <div class="glass-card p-6 text-center">
+          <div class="w-12 h-12 rounded-xl bg-accent/15 flex items-center justify-center mx-auto mb-4">
+            <ArrowTrendingUpIcon class="w-6 h-6 text-accent" />
+          </div>
+          <h3 class="text-text-primary font-semibold text-lg mb-2">Improve</h3>
+          <p class="text-text-secondary text-sm leading-relaxed">Each evaluation generates targeted action items. Apply them to the agent's persona file and track the results.</p>
         </div>
       </div>
     </section>
@@ -471,10 +507,10 @@ function isVisible(id) {
           </p>
           <div class="flex items-center justify-center gap-4 flex-wrap">
             <RouterLink
-              to="/browse"
+              to="/marketplace"
               class="px-8 py-3 bg-accent hover:bg-accent-hover rounded-xl text-white font-semibold transition-all hover:shadow-lg hover:shadow-accent/25"
             >
-              Browse Agents
+              Explore Marketplace
             </RouterLink>
             <RouterLink
               to="/evaluate"

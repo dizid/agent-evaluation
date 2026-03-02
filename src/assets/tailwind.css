@@ -11,7 +11,9 @@
 
   /* Score colors (traffic light) */
   --color-score-elite: #00ff88;
+  --color-score-advanced: #00b4d8;
   --color-score-strong: #00d4ff;
+  --color-score-solid: #e0a500;
   --color-score-adequate: #f7931a;
   --color-score-weak: #ff6b4a;
   --color-score-failing: #ff4757;

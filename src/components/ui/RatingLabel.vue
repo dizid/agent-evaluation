@@ -10,7 +10,9 @@ const props = defineProps({
 const colorClass = computed(() => {
   switch (props.label) {
     case 'Elite': return 'text-score-elite'
+    case 'Advanced': return 'text-score-advanced'
     case 'Strong': return 'text-score-strong'
+    case 'Solid': return 'text-score-solid'
     case 'Adequate': return 'text-score-adequate'
     case 'Weak': return 'text-score-weak'
     case 'Failing': return 'text-score-failing'
@@ -25,7 +27,9 @@ const sizeClass = computed(() =>
 const iconComponent = computed(() => {
   switch (props.label) {
     case 'Elite': return StarIcon
+    case 'Advanced': return CheckCircleIcon
     case 'Strong': return CheckCircleIcon
+    case 'Solid': return MinusCircleIcon
     case 'Adequate': return MinusCircleIcon
     case 'Weak': return ExclamationCircleIcon
     case 'Failing': return XCircleIcon
@@ -40,8 +44,10 @@ const iconSize = computed(() =>
 const tooltipText = computed(() => {
   switch (props.label) {
     case 'Elite': return 'Rating: Elite \u2014 scores 9.0-10.0'
-    case 'Strong': return 'Rating: Strong \u2014 scores 7.0-8.9'
-    case 'Adequate': return 'Rating: Adequate \u2014 scores 5.0-6.9'
+    case 'Advanced': return 'Rating: Advanced \u2014 scores 8.0-8.9'
+    case 'Strong': return 'Rating: Strong \u2014 scores 7.0-7.9'
+    case 'Solid': return 'Rating: Solid \u2014 scores 6.0-6.9'
+    case 'Adequate': return 'Rating: Adequate \u2014 scores 5.0-5.9'
     case 'Weak': return 'Rating: Weak \u2014 scores 3.0-4.9'
     case 'Failing': return 'Rating: Failing \u2014 scores below 3.0'
     default: return 'Not yet rated'

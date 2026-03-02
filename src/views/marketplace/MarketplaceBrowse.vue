@@ -3,6 +3,8 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getMarketplaceTemplates } from '@/services/api'
 import { useToast } from '@/composables/useToast'
+import { useOrgContext } from '@/composables/useOrgContext.js'
+import { useOnboardingChecklist } from '@/composables/useOnboardingChecklist.js'
 import {
   MagnifyingGlassIcon,
   ArrowDownIcon,
@@ -14,6 +16,8 @@ import { StarIcon as StarSolidIcon } from '@heroicons/vue/24/solid'
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
+const { orgSlug } = useOrgContext()
+const { completeStep } = useOnboardingChecklist(orgSlug)
 
 const templates = ref([])
 const loading = ref(false)
@@ -128,6 +132,8 @@ const getCategoryBgColor = (cat) => {
 }
 
 onMounted(() => {
+  // Mark the "browse marketplace" onboarding step as complete
+  completeStep('browsed_marketplace')
   loadTemplates()
 })
 </script>

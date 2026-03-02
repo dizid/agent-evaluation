@@ -13,6 +13,8 @@ import {
 } from '@/services/scoring'
 import { formatLabel } from '@/utils/format'
 import { useToast } from '@/composables/useToast'
+import { useOrgContext } from '@/composables/useOrgContext.js'
+import { useOnboardingChecklist } from '@/composables/useOnboardingChecklist.js'
 import ScoreSlider from '@/components/evaluations/ScoreSlider.vue'
 import ScoreBadge from '@/components/ui/ScoreBadge.vue'
 import RatingLabel from '@/components/ui/RatingLabel.vue'
@@ -21,12 +23,23 @@ import {
   CheckIcon,
   ExclamationTriangleIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  LightBulbIcon
 } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const { orgSlug } = useOrgContext()
+const { completeStep } = useOnboardingChecklist(orgSlug)
+
+// --- First-time guidance banner ---
+const showEvalGuidance = ref(!localStorage.getItem('eval_guidance_dismissed'))
+
+function dismissEvalGuidance() {
+  showEvalGuidance.value = false
+  localStorage.setItem('eval_guidance_dismissed', '1')
+}
 
 // --- Data ---
 const agents = ref([])
@@ -261,6 +274,7 @@ async function handleSubmit() {
       action_item: actionItem.value.trim() || null
     })
     submitted.value = true
+    completeStep('submitted_evaluation')
     toast.success(`Evaluation submitted for ${selectedAgent.value?.name || 'agent'}`)
     router.push(`/agent/${selectedAgentId.value}`)
   } catch (e) {
@@ -363,6 +377,27 @@ function getKpiScoreSummary() {
       <section v-if="currentStep === 1" class="space-y-4">
         <h2 class="text-text-secondary text-sm uppercase tracking-wider">Select Agent</h2>
 
+        <!-- First-time evaluating guidance banner -->
+        <div v-if="showEvalGuidance" class="glass-card p-4 border-accent/20 mb-4">
+          <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center shrink-0">
+              <LightBulbIcon class="w-5 h-5 text-accent" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-text-primary font-medium text-sm mb-1">First time evaluating?</h3>
+              <p class="text-text-secondary text-xs leading-relaxed mb-2">
+                Each evaluation scores an agent across 8 universal dimensions (like accuracy, efficiency, judgment) plus role-specific KPIs. Scores range from 1-10 and generate targeted improvement suggestions.
+              </p>
+              <button
+                @click="dismissEvalGuidance"
+                class="text-accent text-xs font-medium hover:text-accent-hover transition-colors"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+
         <select
           id="agent-select"
           v-model="selectedAgentId"
@@ -390,7 +425,7 @@ function getKpiScoreSummary() {
         </label>
         <span v-if="isSelfEval" class="text-text-muted text-xs ml-6 flex items-center gap-1">
           <ExclamationTriangleIcon class="w-3.5 h-3.5 text-score-adequate" />
-          Self-evaluations are weighted at 0.8x
+          Self-evaluations carry 0.8x weight to reduce self-bias. For full weight, have a peer evaluate instead.
         </span>
       </section>
 
@@ -442,6 +477,7 @@ function getKpiScoreSummary() {
             v-model="scores[criterion.key]"
             :label="criterion.label"
             :description="criterion.description"
+            :scoring-guide="criteriaInfo[criterion.key]?.scoring_guide || ''"
           />
         </div>
 
@@ -449,7 +485,7 @@ function getKpiScoreSummary() {
         <div v-if="lowEffortWarning" class="glass-card p-3 border-score-adequate/30 flex items-center gap-2">
           <ExclamationTriangleIcon class="w-5 h-5 text-score-adequate shrink-0" />
           <span class="text-score-adequate text-sm">
-            Your scores are very similar. Varied scores produce more useful evaluations.
+            All your scores are within 1 point of each other. This triggers low-effort detection, which reduces this evaluation's weight to 0.5x. Try differentiating scores based on actual performance.
           </span>
         </div>
 
@@ -457,7 +493,7 @@ function getKpiScoreSummary() {
         <div v-if="needsJustificationScores.length > 0" class="glass-card p-3 border-score-adequate/30 flex items-center gap-2">
           <ExclamationTriangleIcon class="w-5 h-5 text-score-adequate shrink-0" />
           <span class="text-score-adequate text-sm">
-            Extreme scores (9+ or 3-) will be adjusted unless you provide justification in the review step.
+            Scores of 9-10 or 1-3 are considered extreme and will be capped unless you provide justification in the Strength or Weakness fields on the review step.
           </span>
         </div>
       </section>
@@ -482,6 +518,7 @@ function getKpiScoreSummary() {
             v-model="scores[kpi.key]"
             :label="kpi.name"
             :description="kpi.description"
+            :scoring-guide="criteriaInfo[kpi.key]?.scoring_guide || ''"
           />
         </div>
 
@@ -489,7 +526,7 @@ function getKpiScoreSummary() {
         <div v-if="lowEffortWarning" class="glass-card p-3 border-score-adequate/30 flex items-center gap-2">
           <ExclamationTriangleIcon class="w-5 h-5 text-score-adequate shrink-0" />
           <span class="text-score-adequate text-sm">
-            Your scores are very similar. Varied scores produce more useful evaluations.
+            All your scores are within 1 point of each other. This triggers low-effort detection, which reduces this evaluation's weight to 0.5x. Try differentiating scores based on actual performance.
           </span>
         </div>
 
@@ -497,7 +534,7 @@ function getKpiScoreSummary() {
         <div v-if="needsJustificationScores.length > 0" class="glass-card p-3 border-score-adequate/30 flex items-center gap-2">
           <ExclamationTriangleIcon class="w-5 h-5 text-score-adequate shrink-0" />
           <span class="text-score-adequate text-sm">
-            Extreme scores (9+ or 3-) will be adjusted unless you provide justification in the review step.
+            Scores of 9-10 or 1-3 are considered extreme and will be capped unless you provide justification in the Strength or Weakness fields on the review step.
           </span>
         </div>
       </section>

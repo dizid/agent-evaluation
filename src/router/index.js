@@ -35,6 +35,12 @@ const routes = [
     meta: { title: 'Agent Marketplace — AgentEval', public: true }
   },
   {
+    path: '/marketplace/publish/:id',
+    name: 'marketplace-publish',
+    component: () => import('../views/marketplace/MarketplacePublish.vue'),
+    meta: { title: 'Publish Agent — AgentEval' }
+  },
+  {
     path: '/marketplace/:id',
     name: 'marketplace-detail',
     component: () => import('../views/marketplace/MarketplaceDetail.vue'),

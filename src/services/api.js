@@ -366,6 +366,16 @@ export const submitTemplateReview = (templateId, data) => {
   })
 }
 
+export const publishTemplate = (data) => {
+  return request('/marketplace', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }).then(result => {
+    invalidateCache('/marketplace')
+    return result
+  })
+}
+
 // --- Dashboard ---
 
 export const getDashboardStats = () => fetchWithCache('/dashboard', {}, 2 * 60 * 1000) // 2 min TTL

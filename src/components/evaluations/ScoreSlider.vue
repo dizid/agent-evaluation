@@ -1,11 +1,13 @@
 <script setup>
 import { computed } from 'vue'
 import { getScoreColor, getScoreBgColor } from '@/services/scoring'
+import { InformationCircleIcon } from '@heroicons/vue/20/solid'
 
 const props = defineProps({
   modelValue: { type: Number, default: 5 },
   label: { type: String, required: true },
-  description: { type: String, default: '' }
+  description: { type: String, default: '' },
+  scoringGuide: { type: String, default: '' }
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -44,7 +46,16 @@ const fillPercent = computed(() => ((props.modelValue - 1) / 9) * 100)
     <!-- Header: label + score display -->
     <div class="flex items-start justify-between gap-3 mb-1">
       <div class="min-w-0 flex-1">
-        <div class="text-text-primary font-medium text-sm">{{ label }}</div>
+        <div class="text-text-primary font-medium text-sm flex items-center gap-1.5">
+          {{ label }}
+          <span
+            v-if="scoringGuide"
+            class="badge-tooltip cursor-help"
+            :data-tooltip="scoringGuide"
+          >
+            <InformationCircleIcon class="w-4 h-4 text-text-muted hover:text-accent transition-colors" />
+          </span>
+        </div>
         <div v-if="description" class="text-text-muted text-xs mt-0.5 leading-relaxed">
           {{ description }}
         </div>
