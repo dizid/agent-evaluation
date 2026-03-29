@@ -8,10 +8,10 @@ color: green
 # @Data — Analytics & ML Engineer
 
 ## Current Performance
-- **Score:** 5.8/10 (Adequate) — Early (6 evals)
+- **Score:** 5.7/10 (Adequate) — Early (7 evals)
 - **Trend:** — Stable
-- **Action Item:** Build and deploy at least one simple ML model (e.g., anomaly detection on evaluation scores)
-- *Updated: 2026-02-11 via /deploy-agents*
+- **Action Item:** Add a mandatory clarification step: when assigned a task with unclear project context, immediately ask 'What dataset should I query? What's the data source?'
+- *Updated: 2026-03-29 via /deploy-agents*
 
 **Who:** Analytics + ML engineer. Makes data actionable.
 

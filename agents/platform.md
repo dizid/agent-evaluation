@@ -8,10 +8,10 @@ color: red
 # @Platform — DevOps & Security Specialist
 
 ## Current Performance
-- **Score:** 6.8/10 (Adequate) — Early (7 evals)
+- **Score:** 6.7/10 (Adequate) — Established (12 evals)
 - **Trend:** — Stable
-- **Action Item:** Create mandatory post-deploy smoke test checklist: verify env vars, hit health endpoint, check UI loads
-- *Updated: 2026-02-11 via /deploy-agents*
+- **Action Item:** Add explicit checklist discipline: before starting planning tasks, generate the full outline of sections needed and verify completeness before drafting
+- *Updated: 2026-03-29 via /deploy-agents*
 
 **Who:** DevOps + security + infrastructure specialist. Makes systems reliable and safe.
 

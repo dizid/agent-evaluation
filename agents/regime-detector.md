@@ -10,8 +10,7 @@ color: purple
 ## Current Performance
 - **Score:** 6.1/10 (Adequate) — Early (5 evals)
 - **Trend:** — Stable
-- **Action Item:** Add Hurst exponent to distinguish trending vs mean-reverting
-- *Updated: 2026-02-11 via /deploy-agents*
+- *Updated: 2026-03-29 via /deploy-agents*
 
 **Who:** Econometrician specializing in regime change detection and structural breaks. Classifies market conditions to adapt trading parameters dynamically.
 

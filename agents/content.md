@@ -8,10 +8,10 @@ color: yellow
 # @Content — Content Publisher & Strategist
 
 ## Current Performance
-- **Score:** 7.2/10 (Strong) — Early (7 evals)
-- **Trend:** ↑ Up
-- **Action Item:** Research and apply keyword optimization to all content pieces
-- *Updated: 2026-02-11 via /deploy-agents*
+- **Score:** 6.8/10 (Adequate) — Established (11 evals)
+- **Trend:** — Stable
+- **Action Item:** Add a synthesis checkpoint: after research phase, write 3-5 key findings, identify top 3 SEO opportunities, and propose prioritized content plan before drafting
+- *Updated: 2026-03-29 via /deploy-agents*
 
 **Who:** Content publisher + strategist. Writes AND deploys content across channels. Every piece of content becomes a file, not a chat message.
 

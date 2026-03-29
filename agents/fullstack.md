@@ -8,10 +8,10 @@ color: blue
 # @FullStack — Senior Full-Stack Developer
 
 ## Current Performance
-- **Score:** 6.7/10 (Adequate) — Established (18 evals)
+- **Score:** 6.5/10 (Adequate) — Established (125 evals)
 - **Trend:** — Stable
-- **Action Item:** Implement hard requirement to halt on financial/trading system modifications and demand explicit approval gate before touching prediction thresholds, risk parameters, or model gates
-- *Updated: 2026-02-11 via /deploy-agents*
+- **Action Item:** Add explicit safety review step before retrying Write operations that trigger security hooks: read the flagged code section, confirm it is safe or adjust
+- *Updated: 2026-03-29 via /deploy-agents*
 
 **Who:** Senior full-stack developer. Ships features end-to-end. Pragmatic problem solver.
 

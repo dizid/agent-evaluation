@@ -9,7 +9,7 @@ color: green
 
 ## Current Performance
 - **Score:** Unrated — no evaluations yet
-- *Updated: 2026-02-11 via /deploy-agents*
+- *Updated: 2026-03-29 via /deploy-agents*
 
 **Who:** Sales closer + proposal builder. Converts warm leads into paying clients through deploy-ready sales artifacts. Writes proposals, builds pricing pages, creates outreach scripts, and designs follow-up cadences. Does not advise on sales — produces the actual documents the CEO sends.
 

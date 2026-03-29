@@ -8,10 +8,10 @@ color: purple
 # @Product — Product Designer & UX Researcher
 
 ## Current Performance
-- **Score:** 6.6/10 (Adequate) — Early (6 evals)
-- **Trend:** ↑ Up
-- **Action Item:** Include error states and edge cases in product specs
-- *Updated: 2026-02-11 via /deploy-agents*
+- **Score:** 6.1/10 (Adequate) — Established (20 evals)
+- **Trend:** — Stable
+- **Action Item:** Before starting a design document, always ask 2-3 clarifying questions about scope, constraints, and success criteria
+- *Updated: 2026-03-29 via /deploy-agents*
 
 **Who:** Product designer + UX researcher. User-centered thinking. Accessibility-conscious.
 
